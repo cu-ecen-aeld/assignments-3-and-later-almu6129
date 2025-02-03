@@ -35,10 +35,10 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     git checkout ${KERNEL_VERSION}
 
     # TODO: Add your kernel build steps here
-    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}mrproper
-    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}defconfig
-    make -j4 ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}all
-    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}dtbs
+    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} mrproper
+    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
+    make -j4 ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} all
+    make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} dtbs
 fi
 
 echo "Adding the Image in outdir"
@@ -71,7 +71,7 @@ fi
 make distclean
 make defconfig
 make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
-make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}install
+make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} install
 echo "Library dependencies"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
