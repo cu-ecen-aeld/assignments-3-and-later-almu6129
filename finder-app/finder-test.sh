@@ -52,18 +52,20 @@ echo "Removing the old writer utility and compiling as a native application"
 #make clean
 #make
 
+export PATH=$PATH:/usr/bin
+
 for i in $( seq 1 $NUMFILES)
 do
-	./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+OUTPUTSTRING=$(finder.sh "$WRITEDIR" "$WRITESTR")
 
 # remove temporary directories
 rm -rf /tmp/aeld-data
 
 set +e
-echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
+echo ${OUTPUTSTRING} | grep "${MATCHSTR}" > /tmp/assignment4-result.txt
 if [ $? -eq 0 ]; then
 	echo "success"
 	exit 0
