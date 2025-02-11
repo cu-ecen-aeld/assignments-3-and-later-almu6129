@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 filesdir=$1
 
@@ -20,7 +20,7 @@ fi
 
 file_count=$(ls ${filesdir} -R | wc -l)
 
-((file_count--))
+file_count=$((file_count - 1))
 
 pattern_count=$(grep -or ${searchstr} ${filesdir} | wc -l)
 
