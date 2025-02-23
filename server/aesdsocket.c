@@ -11,7 +11,7 @@
 #include <signal.h>
 
 #define PORT_NUM 9000
-#define BUFSIZE 25000
+#define BUFSIZE 30000
 
 int stop_flag;
 
@@ -24,10 +24,19 @@ int main(int argc, char * argv[]){
 	struct sockaddr_in serveraddr; /* server's addr */
   	struct sockaddr_in clientaddr; /* client addr */
   	struct hostent *hostp; /* client host info */
-	static char buf[BUFSIZE];
+	//static char buf[BUFSIZE];
 	char *hostaddrp;
 	struct sigaction sa;
 	stop_flag = 0;
+
+	char * buf = malloc(BUFSIZE);
+
+	if(buf == NULL){
+		perror("error with malloc");
+		return -1;
+	}
+
+	fflush(stdin);
 
 	sa.sa_handler = signal_handler;
 
@@ -75,22 +84,6 @@ int main(int argc, char * argv[]){
 
 			syslog(LOG_INFO, "Accepted connection from %s", hostaddrp);
 
-			bzero(buf, BUFSIZE);
-    		n = recv(clientfd, buf, BUFSIZE, 0);
-    		if (n < 0){
-      			perror("ERROR in recv");
-				closelog();
-				close(sockfd);
-				return -1;
-			}
-
-			char *token;
-
-			if((token = strtok(buf, "\n")) == NULL){
-				fprintf(stderr, "Ran into issues with finding a full packet\n");
-				closelog();
-				return -1;
-			}
 			int fd = open("/var/tmp/aesdsocketdata", O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 			if(fd == -1){
@@ -99,14 +92,44 @@ int main(int argc, char * argv[]){
 				return -1;
 			}
 
-			sprintf(token, "%s\n", token);
-			lseek(fd, 0, SEEK_END);
-			int len_to_write = strlen(token);
-			if(write(fd, token, len_to_write) != len_to_write){
-				fprintf(stderr, "Ran into issues with sending a full packet\n");
-				closelog();
-				return -1;
+			while(1){
+				bzero(buf, BUFSIZE);
+				n = recv(clientfd, buf, BUFSIZE, 0);
+				if (n < 0){
+					perror("ERROR in recv");
+					closelog();
+					close(sockfd);
+					return -1;
+				}
+				printf("read: %d bytes\n", n);
+				char *token;
+				int found_terminator = 0;
+
+				for(int i = 0; i < n; i++){
+					if(buf[i] == '\n'){
+						found_terminator = 1;
+					}
+				}
+
+				if((token = strtok(buf, "\n")) == NULL){
+					fprintf(stderr, "Ran into issues with finding a full packet\n");
+					closelog();
+					return -1;
+				}
+
+				lseek(fd, 0, SEEK_END);
+				int len_to_write = strlen(token);
+				if(write(fd, token, len_to_write) != len_to_write){
+					fprintf(stderr, "Ran into issues with sending a full packet\n");
+					closelog();
+					return -1;
+				}
+
+				if(found_terminator) break;
+
 			}
+
+			write(fd, "\n", 1);
 
 			lseek(fd, 0, SEEK_SET);
 
@@ -123,7 +146,7 @@ int main(int argc, char * argv[]){
 			}
 
 			int ret_val_read = read(fd, to_echo_back, file_size);
-
+			
 			if(ret_val_read == -1){
 				perror("error with read");
 				closelog();
@@ -145,7 +168,7 @@ int main(int argc, char * argv[]){
 		}
 
 	}
-	else if(argc == 2 && (strcmp(argv[2], "-d") == 0)){
+	else if(argc == 2 && (strcmp(argv[1], "-d") == 0)){
 		sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 		if (sockfd < 0){
@@ -165,6 +188,42 @@ int main(int argc, char * argv[]){
 			return -1;
 		}
 
+		pid_t pid = fork();
+		if (pid < 0) {
+			perror("Fork failed");
+			return -1;
+		}
+		if (pid > 0) {
+			exit(0); 
+		}
+
+		if (setsid() < 0) {
+			perror("Failed to create new session");
+			return -1;
+		}
+
+		if (chdir("/") < 0) {
+			perror("Failed to change directory");
+			return -1;
+		}
+
+		close(STDIN_FILENO);  
+		close(STDOUT_FILENO); 
+		close(STDERR_FILENO); 
+
+		int null_fd = open("/dev/null", O_RDWR);
+		if (null_fd == -1) {
+			perror("Failed to open /dev/null");
+			return -1;
+		}
+
+		if (dup2(null_fd, STDIN_FILENO) == -1 ||
+			dup2(null_fd, STDOUT_FILENO) == -1 ||
+			dup2(null_fd, STDERR_FILENO) == -1) {
+			perror("Failed to redirect file descriptors");
+			return -1;
+		}
+
 		listen(sockfd , 3);
 
 		int clientlen = sizeof(clientaddr);
@@ -178,22 +237,6 @@ int main(int argc, char * argv[]){
 
 			syslog(LOG_INFO, "Accepted connection from %s", hostaddrp);
 
-			bzero(buf, BUFSIZE);
-    		n = recv(clientfd, buf, BUFSIZE, 0);
-    		if (n < 0){
-      			perror("ERROR in recv");
-				closelog();
-				close(clientfd);
-				return -1;
-			}
-
-			char *token;
-
-			if((token = strtok(buf, "\n")) == NULL){
-				fprintf(stderr, "Ran into issues with finding a full packet\n");
-				closelog();
-				return -1;
-			}
 			int fd = open("/var/tmp/aesdsocketdata", O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 			if(fd == -1){
@@ -202,14 +245,44 @@ int main(int argc, char * argv[]){
 				return -1;
 			}
 
-			sprintf(token, "%s\n", token);
-			int len_to_write = strlen(token);
-			lseek(fd, 0, SEEK_END);
-			if(write(fd, token, len_to_write) != len_to_write){
-				fprintf(stderr, "Ran into issues with sending a full packet\n");
-				closelog();
-				return -1;
+			while(1){
+				bzero(buf, BUFSIZE);
+				n = recv(clientfd, buf, BUFSIZE, 0);
+				if (n < 0){
+					perror("ERROR in recv");
+					closelog();
+					close(sockfd);
+					return -1;
+				}
+				printf("read: %d bytes\n", n);
+				char *token;
+				int found_terminator = 0;
+
+				for(int i = 0; i < n; i++){
+					if(buf[i] == '\n'){
+						found_terminator = 1;
+					}
+				}
+
+				if((token = strtok(buf, "\n")) == NULL){
+					fprintf(stderr, "Ran into issues with finding a full packet\n");
+					closelog();
+					return -1;
+				}
+
+				lseek(fd, 0, SEEK_END);
+				int len_to_write = strlen(token);
+				if(write(fd, token, len_to_write) != len_to_write){
+					fprintf(stderr, "Ran into issues with sending a full packet\n");
+					closelog();
+					return -1;
+				}
+
+				if(found_terminator) break;
+
 			}
+
+			write(fd, "\n", 1);
 
 			lseek(fd, 0, SEEK_SET);
 
