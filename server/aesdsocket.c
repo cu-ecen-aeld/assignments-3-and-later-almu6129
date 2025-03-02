@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <time.h>
+#include <stdbool.h>
 
 #include "queue.h"
 
@@ -44,6 +46,7 @@ void signal_handler(int signal_num);
 int sendall(int s, char *buf, int *len);
 void *response_handler(void *);
 void *joiner_handler(void *);
+void *timer_handler(void *);
 
 int main(int argc, char * argv[]){
 
@@ -55,6 +58,7 @@ int main(int argc, char * argv[]){
 	struct sigaction sa;
 	stop_flag = 0;
 	pthread_t garbage_collector_thread;
+	pthread_t timer_thread;
 
 	pthread_mutex_t file_mutex;
 	pthread_mutex_init(&file_mutex, NULL);
@@ -109,7 +113,7 @@ int main(int argc, char * argv[]){
 				return -1;
 			}
 			if (pid > 0) {
-				exit(0); 
+				return 0; 
 			}
 
 			if (setsid() < 0) {
@@ -144,7 +148,26 @@ int main(int argc, char * argv[]){
 
 		listen(sockfd , 3);
 
-		pthread_create( &garbage_collector_thread , NULL ,  joiner_handler , (void*) &head);
+		if( pthread_create( &garbage_collector_thread , NULL ,  joiner_handler , (void*) &head) < 0)
+		{
+			perror("could not create thread");
+			return -1;
+		}
+
+		thread_context * timer_thread_info = (thread_context *)malloc(sizeof(thread_context));
+
+		if(timer_thread_info == NULL){
+			perror("error with malloc");
+			return -1;
+		}
+
+		timer_thread_info -> file_mutex_lock = &file_mutex;
+
+		if( pthread_create( &timer_thread , NULL ,  timer_handler , (void*) timer_thread_info) < 0)
+		{
+			perror("could not create thread");
+			return -1;
+		}
 		
 		int c = sizeof(struct sockaddr_in);
 
@@ -196,8 +219,10 @@ int main(int argc, char * argv[]){
 	}
 
 	pthread_join(garbage_collector_thread, NULL);
+	pthread_cancel(timer_thread);
 
 	closelog();
+
 	return 0;
 
 }
@@ -307,6 +332,47 @@ void *joiner_handler(void *arr){
 		//periodically examine the list
 		usleep(200000);
 	}
+}
+
+void *timer_handler(void *thread_info){
+
+	thread_context * total_context = (thread_context *)thread_info;
+	time_t rawtime;
+    struct tm *timeinfo;
+    char time_str[100];
+
+	int fd = open("/var/tmp/aesdsocketdata", O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+	if(fd == -1){
+		perror("error with open");
+		return thread_info;
+	}
+
+	while(!stop_flag){
+
+		sleep(10);
+
+		tzset();
+		time(&rawtime);
+    	timeinfo = localtime(&rawtime);
+
+		strftime(time_str, sizeof(time_str), "timestamp:%a, %d %b %Y %H:%M:%S %z\n", timeinfo);
+
+		int len_to_write = strlen(time_str);
+
+		pthread_mutex_lock(total_context -> file_mutex_lock);
+
+		lseek(fd, 0, SEEK_END);
+		if(write(fd, time_str, len_to_write) != len_to_write){
+			fprintf(stderr, "Ran into issues with sending a full packet\n");
+			pthread_mutex_unlock(total_context -> file_mutex_lock);
+			return thread_info;
+		}
+		pthread_mutex_unlock(total_context -> file_mutex_lock);
+	}
+
+	close(fd);
+
 }
 
 void signal_handler(int signal_num) {
