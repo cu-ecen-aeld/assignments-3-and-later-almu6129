@@ -1,5 +1,7 @@
 CC ?= gcc
 
+LDFLAGS ?=
+
 ifeq ($(CROSS_COMPILE), aarch64-none-linux-gnu-)
         CC = aarch64-none-linux-gnu-gcc
 endif
