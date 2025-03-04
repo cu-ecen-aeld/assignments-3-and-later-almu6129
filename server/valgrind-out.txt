@@ -1,216 +1,257 @@
-==116203== Memcheck, a memory error detector
-==116203== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
-==116203== Using Valgrind-3.18.1-42b08ed5bd-20211015 and LibVEX; rerun with -h for copyright info
-==116203== Command: ./aesdsocket
-==116203== Parent PID: 116201
-==116203== 
---116203-- 
---116203-- Valgrind options:
---116203--    --error-exitcode=1
---116203--    --leak-check=full
---116203--    --show-leak-kinds=all
---116203--    --track-origins=yes
---116203--    --errors-for-leak-kinds=definite
---116203--    --verbose
---116203--    --log-file=valgrind-out.txt
---116203-- Contents of /proc/version:
---116203--   Linux version 6.8.0-52-generic (buildd@lcy02-amd64-099) (x86_64-linux-gnu-gcc-12 (Ubuntu 12.3.0-1ubuntu1~22.04) 12.3.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #53~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jan 15 19:18:46 UTC 2
---116203-- 
---116203-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed
---116203-- Page sizes: currently 4096, max supported 4096
---116203-- Valgrind library directory: /usr/libexec/valgrind
---116203-- Reading syms from /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket
---116203-- Reading syms from /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
---116203--   Considering /usr/lib/debug/.build-id/e4/de036b19e4768e7591b596c4be9f9015f2d28a.debug ..
---116203--   .. build-id is valid
---116203-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
---116203--    object doesn't have a symbol table
---116203--    object doesn't have a dynamic symbol table
---116203-- Scheduler: using generic scheduler lock implementation.
---116203-- Reading suppressions file: /usr/libexec/valgrind/default.supp
-==116203== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-116203-by-mueller4110-on-???
-==116203== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-116203-by-mueller4110-on-???
-==116203== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-116203-by-mueller4110-on-???
-==116203== 
-==116203== TO CONTROL THIS PROCESS USING vgdb (which you probably
-==116203== don't want to do, unless you know exactly what you're doing,
-==116203== or are doing some strange experiment):
-==116203==   /usr/bin/vgdb --pid=116203 ...command...
-==116203== 
-==116203== TO DEBUG THIS PROCESS USING GDB: start GDB like this
-==116203==   /path/to/gdb ./aesdsocket
-==116203== and then give GDB the following command
-==116203==   target remote | /usr/bin/vgdb --pid=116203
-==116203== --pid is optional if only one valgrind process is running
-==116203== 
---116203-- REDIR: 0x402aa40 (ld-linux-x86-64.so.2:strlen) redirected to 0x580bcec2 (???)
---116203-- REDIR: 0x402a810 (ld-linux-x86-64.so.2:index) redirected to 0x580bcedc (???)
---116203-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
---116203--    object doesn't have a symbol table
---116203-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
---116203--    object doesn't have a symbol table
-==116203== WARNING: new redirection conflicts with existing -- ignoring it
---116203--     old: 0x0402aa40 (strlen              ) R-> (0000.0) 0x580bcec2 ???
---116203--     new: 0x0402aa40 (strlen              ) R-> (2007.0) 0x0484ee30 strlen
---116203-- REDIR: 0x4027220 (ld-linux-x86-64.so.2:strcmp) redirected to 0x484fcd0 (strcmp)
---116203-- REDIR: 0x402afa0 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4853840 (mempcpy)
---116203-- Reading syms from /usr/lib/x86_64-linux-gnu/libc.so.6
---116203--   Considering /usr/lib/debug/.build-id/cd/410b710f0f094c6832edd95931006d883af48e.debug ..
---116203--   .. build-id is valid
-==116203== WARNING: new redirection conflicts with existing -- ignoring it
---116203--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
---116203--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e050 aligned_alloc
-==116203== WARNING: new redirection conflicts with existing -- ignoring it
---116203--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
---116203--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e020 aligned_alloc
-==116203== WARNING: new redirection conflicts with existing -- ignoring it
---116203--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
---116203--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e050 aligned_alloc
-==116203== WARNING: new redirection conflicts with existing -- ignoring it
---116203--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
---116203--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e020 aligned_alloc
---116203-- REDIR: 0x4921720 (libc.so.6:strnlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49219e0 (libc.so.6:strpbrk) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49212e0 (libc.so.6:strcmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x493fcd0 (libc.so.6:wcsnlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49226d0 (libc.so.6:memset) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x493e540 (libc.so.6:wcslen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922c10 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x493e370 (libc.so.6:wcschr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921260 (libc.so.6:index) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921960 (libc.so.6:rindex) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49225a0 (libc.so.6:memmove) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
-==116203== Preferring higher priority redirection:
---116203--     old: 0x04a197c0 (__memcpy_avx_unalign) R-> (2018.0) 0x04850f90 __memcpy_avx_unaligned_erms
---116203--     new: 0x04a197c0 (__memcpy_avx_unalign) R-> (2018.1) 0x04852880 memmove
---116203-- REDIR: 0x493e3f0 (libc.so.6:wcscmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49229e0 (libc.so.6:stpncpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x493e9b0 (libc.so.6:wmemchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921830 (libc.so.6:strncmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922a70 (libc.so.6:strcasecmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921420 (libc.so.6:strcspn) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x493e470 (libc.so.6:wcscpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49211d0 (libc.so.6:strcat) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922b60 (libc.so.6:strncasecmp_l) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922480 (libc.so.6:bcmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x492a570 (libc.so.6:memrchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4924010 (libc.so.6:strchrnul) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921390 (libc.so.6:strcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922b10 (libc.so.6:strcasecmp_l) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49216a0 (libc.so.6:strlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49218d0 (libc.so.6:strncpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922950 (libc.so.6:stpcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49223f0 (libc.so.6:memchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4921b00 (libc.so.6:strspn) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x49227d0 (libc.so.6:mempcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4922ac0 (libc.so.6:strncasecmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4923f80 (libc.so.6:rawmemchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
---116203-- REDIR: 0x4a16610 (libc.so.6:__strrchr_avx2) redirected to 0x484e810 (rindex)
---116203-- REDIR: 0x491e0a0 (libc.so.6:malloc) redirected to 0x4848820 (malloc)
-==116203== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x109647: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff308 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095B1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x109647: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff2f8 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095A9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x10967E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff308 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095B1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x10967E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff2f8 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095A9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
---116203-- REDIR: 0x4a16400 (libc.so.6:__strchrnul_avx2) redirected to 0x4853330 (strchrnul)
---116203-- REDIR: 0x491f520 (libc.so.6:calloc) redirected to 0x484d9d0 (calloc)
---116203-- REDIR: 0x4a167e0 (libc.so.6:__strlen_avx2) redirected to 0x484ed10 (strlen)
---116203-- REDIR: 0x491e3e0 (libc.so.6:free) redirected to 0x484b210 (free)
---116203-- REDIR: 0x4a197c0 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x4852880 (memmove)
---116203-- REDIR: 0x4921fc0 (libc.so.6:__GI_strstr) redirected to 0x4853ae0 (__strstr_sse2)
---116203-- REDIR: 0x4a12a80 (libc.so.6:__memcmp_avx2_movbe) redirected to 0x4852010 (bcmp)
---116203-- REDIR: 0x4a11940 (libc.so.6:__strcmp_avx2) redirected to 0x484fbd0 (strcmp)
---116203-- REDIR: 0x4a19780 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x4853440 (mempcpy)
---116203-- REDIR: 0x491e740 (libc.so.6:realloc) redirected to 0x484dc50 (realloc)
---116203-- REDIR: 0x4a19f80 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x4852770 (memset)
---116203-- REDIR: 0x4a11800 (libc.so.6:__strspn_sse42) redirected to 0x4853d50 (strspn)
---116203-- REDIR: 0x4a115a0 (libc.so.6:__strcspn_sse42) redirected to 0x4853c70 (strcspn)
---116203-- REDIR: 0x4a189a0 (libc.so.6:__stpcpy_avx2) redirected to 0x4852130 (stpcpy)
-==116203== 
-==116203== HEAP SUMMARY:
-==116203==     in use at exit: 30,000 bytes in 1 blocks
-==116203==   total heap usage: 52 allocs, 51 frees, 165,657 bytes allocated
-==116203== 
-==116203== Searching for pointers to 1 not-freed blocks
-==116203== Checked 138,864 bytes
-==116203== 
-==116203== 30,000 bytes in 1 blocks are possibly lost in loss record 1 of 1
-==116203==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
-==116203==    by 0x1095E7: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== LEAK SUMMARY:
-==116203==    definitely lost: 0 bytes in 0 blocks
-==116203==    indirectly lost: 0 bytes in 0 blocks
-==116203==      possibly lost: 30,000 bytes in 1 blocks
-==116203==    still reachable: 0 bytes in 0 blocks
-==116203==         suppressed: 0 bytes in 0 blocks
-==116203== 
-==116203== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)
-==116203== 
-==116203== 1 errors in context 1 of 4:
-==116203== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x10967E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff2f8 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095A9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== 
-==116203== 1 errors in context 2 of 4:
-==116203== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x10967E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff308 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095B1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== 
-==116203== 1 errors in context 3 of 4:
-==116203== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x109647: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff2f8 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095A9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== 
-==116203== 1 errors in context 4 of 4:
-==116203== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
-==116203==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
-==116203==    by 0x109647: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203==  Address 0x1ffefff308 is on thread 1's stack
-==116203==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
-==116203==  Uninitialised value was created by a stack allocation
-==116203==    at 0x1095B1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
-==116203== 
-==116203== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)
+==58070== Memcheck, a memory error detector
+==58070== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==58070== Using Valgrind-3.18.1-42b08ed5bd-20211015 and LibVEX; rerun with -h for copyright info
+==58070== Command: ./aesdsocket
+==58070== Parent PID: 58068
+==58070== 
+--58070-- 
+--58070-- Valgrind options:
+--58070--    --error-exitcode=1
+--58070--    --leak-check=full
+--58070--    --show-leak-kinds=all
+--58070--    --track-origins=yes
+--58070--    --errors-for-leak-kinds=definite
+--58070--    --verbose
+--58070--    --log-file=valgrind-out.txt
+--58070-- Contents of /proc/version:
+--58070--   Linux version 6.8.0-52-generic (buildd@lcy02-amd64-099) (x86_64-linux-gnu-gcc-12 (Ubuntu 12.3.0-1ubuntu1~22.04) 12.3.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #53~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jan 15 19:18:46 UTC 2
+--58070-- 
+--58070-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed
+--58070-- Page sizes: currently 4096, max supported 4096
+--58070-- Valgrind library directory: /usr/libexec/valgrind
+--58070-- Reading syms from /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket
+--58070-- Reading syms from /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+--58070--   Considering /usr/lib/debug/.build-id/e4/de036b19e4768e7591b596c4be9f9015f2d28a.debug ..
+--58070--   .. build-id is valid
+--58070-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
+--58070--    object doesn't have a symbol table
+--58070--    object doesn't have a dynamic symbol table
+--58070-- Scheduler: using generic scheduler lock implementation.
+--58070-- Reading suppressions file: /usr/libexec/valgrind/default.supp
+==58070== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-58070-by-mueller4110-on-???
+==58070== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-58070-by-mueller4110-on-???
+==58070== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-58070-by-mueller4110-on-???
+==58070== 
+==58070== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==58070== don't want to do, unless you know exactly what you're doing,
+==58070== or are doing some strange experiment):
+==58070==   /usr/bin/vgdb --pid=58070 ...command...
+==58070== 
+==58070== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==58070==   /path/to/gdb ./aesdsocket
+==58070== and then give GDB the following command
+==58070==   target remote | /usr/bin/vgdb --pid=58070
+==58070== --pid is optional if only one valgrind process is running
+==58070== 
+--58070-- REDIR: 0x402aa40 (ld-linux-x86-64.so.2:strlen) redirected to 0x580bcec2 (???)
+--58070-- REDIR: 0x402a810 (ld-linux-x86-64.so.2:index) redirected to 0x580bcedc (???)
+--58070-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
+--58070--    object doesn't have a symbol table
+--58070-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
+--58070--    object doesn't have a symbol table
+==58070== WARNING: new redirection conflicts with existing -- ignoring it
+--58070--     old: 0x0402aa40 (strlen              ) R-> (0000.0) 0x580bcec2 ???
+--58070--     new: 0x0402aa40 (strlen              ) R-> (2007.0) 0x0484ee30 strlen
+--58070-- REDIR: 0x4027220 (ld-linux-x86-64.so.2:strcmp) redirected to 0x484fcd0 (strcmp)
+--58070-- REDIR: 0x402afa0 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4853840 (mempcpy)
+--58070-- Reading syms from /usr/lib/x86_64-linux-gnu/libc.so.6
+--58070--   Considering /usr/lib/debug/.build-id/cd/410b710f0f094c6832edd95931006d883af48e.debug ..
+--58070--   .. build-id is valid
+==58070== WARNING: new redirection conflicts with existing -- ignoring it
+--58070--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
+--58070--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e050 aligned_alloc
+==58070== WARNING: new redirection conflicts with existing -- ignoring it
+--58070--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
+--58070--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e020 aligned_alloc
+==58070== WARNING: new redirection conflicts with existing -- ignoring it
+--58070--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
+--58070--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e050 aligned_alloc
+==58070== WARNING: new redirection conflicts with existing -- ignoring it
+--58070--     old: 0x0491ec60 (memalign            ) R-> (1011.0) 0x0484e080 memalign
+--58070--     new: 0x0491ec60 (memalign            ) R-> (1017.0) 0x0484e020 aligned_alloc
+--58070-- REDIR: 0x4921720 (libc.so.6:strnlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49219e0 (libc.so.6:strpbrk) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49212e0 (libc.so.6:strcmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x493fcd0 (libc.so.6:wcsnlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49226d0 (libc.so.6:memset) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x493e540 (libc.so.6:wcslen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922c10 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x493e370 (libc.so.6:wcschr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921260 (libc.so.6:index) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921960 (libc.so.6:rindex) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49225a0 (libc.so.6:memmove) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+==58070== Preferring higher priority redirection:
+--58070--     old: 0x04a197c0 (__memcpy_avx_unalign) R-> (2018.0) 0x04850f90 __memcpy_avx_unaligned_erms
+--58070--     new: 0x04a197c0 (__memcpy_avx_unalign) R-> (2018.1) 0x04852880 memmove
+--58070-- REDIR: 0x493e3f0 (libc.so.6:wcscmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49229e0 (libc.so.6:stpncpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x493e9b0 (libc.so.6:wmemchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921830 (libc.so.6:strncmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922a70 (libc.so.6:strcasecmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921420 (libc.so.6:strcspn) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x493e470 (libc.so.6:wcscpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49211d0 (libc.so.6:strcat) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922b60 (libc.so.6:strncasecmp_l) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922480 (libc.so.6:bcmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x492a570 (libc.so.6:memrchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4924010 (libc.so.6:strchrnul) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921390 (libc.so.6:strcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922b10 (libc.so.6:strcasecmp_l) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49216a0 (libc.so.6:strlen) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49218d0 (libc.so.6:strncpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922950 (libc.so.6:stpcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49223f0 (libc.so.6:memchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4921b00 (libc.so.6:strspn) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x49227d0 (libc.so.6:mempcpy) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4922ac0 (libc.so.6:strncasecmp) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4923f80 (libc.so.6:rawmemchr) redirected to 0x483f220 (_vgnU_ifunc_wrapper)
+--58070-- REDIR: 0x4a16610 (libc.so.6:__strrchr_avx2) redirected to 0x484e810 (rindex)
+==58070== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7A2: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb48 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6F1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7A2: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb38 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6E9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7D9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb48 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6F1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7D9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb38 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6E9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+--58070-- REDIR: 0x491f520 (libc.so.6:calloc) redirected to 0x484d9d0 (calloc)
+--58070-- REDIR: 0x491e0a0 (libc.so.6:malloc) redirected to 0x4848820 (malloc)
+--58070-- REDIR: 0x4a16400 (libc.so.6:__strchrnul_avx2) redirected to 0x4853330 (strchrnul)
+--58070-- REDIR: 0x4a167e0 (libc.so.6:__strlen_avx2) redirected to 0x484ed10 (strlen)
+--58070-- REDIR: 0x491e3e0 (libc.so.6:free) redirected to 0x484b210 (free)
+--58070-- REDIR: 0x4a197c0 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x4852880 (memmove)
+--58070-- REDIR: 0x4921fc0 (libc.so.6:__GI_strstr) redirected to 0x4853ae0 (__strstr_sse2)
+--58070-- REDIR: 0x4a12a80 (libc.so.6:__memcmp_avx2_movbe) redirected to 0x4852010 (bcmp)
+--58070-- REDIR: 0x4a11940 (libc.so.6:__strcmp_avx2) redirected to 0x484fbd0 (strcmp)
+--58070-- REDIR: 0x4a19f80 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x4852770 (memset)
+--58070-- REDIR: 0x4a19780 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x4853440 (mempcpy)
+--58070-- REDIR: 0x491e740 (libc.so.6:realloc) redirected to 0x484dc50 (realloc)
+--58070-- REDIR: 0x4a18040 (libc.so.6:__strncpy_avx2) redirected to 0x484efe0 (strncpy)
+--58070-- REDIR: 0x4a11800 (libc.so.6:__strspn_sse42) redirected to 0x4853d50 (strspn)
+--58070-- REDIR: 0x4a115a0 (libc.so.6:__strcspn_sse42) redirected to 0x4853c70 (strcspn)
+==58070== Thread 2:
+==58070== Conditional jump or move depends on uninitialised value(s)
+==58070==    at 0x484ED28: strlen (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x48EFD30: __vfprintf_internal (vfprintf-internal.c:1517)
+==58070==    by 0x4996FB9: __vsyslog_internal (syslog.c:229)
+==58070==    by 0x4997499: syslog (syslog.c:109)
+==58070==    by 0x10B197: joiner_handler (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==    by 0x490DAC2: start_thread (pthread_create.c:442)
+==58070==    by 0x499EA03: clone (clone.S:100)
+==58070==  Uninitialised value was created by a heap allocation
+==58070==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x10AB9E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+--58070-- Reading syms from /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+--58070--    object doesn't have a symbol table
+--58070-- Discarding syms at 0x76ad660-0x76c3805 in /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 (have_dinfo 1)
+==58070== 
+==58070== HEAP SUMMARY:
+==58070==     in use at exit: 328 bytes in 2 blocks
+==58070==   total heap usage: 167 allocs, 165 frees, 320,069 bytes allocated
+==58070== 
+==58070== Searching for pointers to 2 not-freed blocks
+==58070== Checked 8,494,904 bytes
+==58070== 
+==58070== Thread 1:
+==58070== 56 bytes in 1 blocks are still reachable in loss record 1 of 2
+==58070==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x10AAD0: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== 272 bytes in 1 blocks are possibly lost in loss record 2 of 2
+==58070==    at 0x484DA83: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x40147D9: calloc (rtld-malloc.h:44)
+==58070==    by 0x40147D9: allocate_dtv (dl-tls.c:375)
+==58070==    by 0x40147D9: _dl_allocate_tls (dl-tls.c:634)
+==58070==    by 0x490E7B4: allocate_stack (allocatestack.c:430)
+==58070==    by 0x490E7B4: pthread_create@@GLIBC_2.34 (pthread_create.c:647)
+==58070==    by 0x10AB31: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== LEAK SUMMARY:
+==58070==    definitely lost: 0 bytes in 0 blocks
+==58070==    indirectly lost: 0 bytes in 0 blocks
+==58070==      possibly lost: 272 bytes in 1 blocks
+==58070==    still reachable: 56 bytes in 1 blocks
+==58070==         suppressed: 0 bytes in 0 blocks
+==58070== 
+==58070== ERROR SUMMARY: 21 errors from 5 contexts (suppressed: 0 from 0)
+==58070== 
+==58070== 1 errors in context 1 of 5:
+==58070== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7D9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb38 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6E9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== 
+==58070== 1 errors in context 2 of 5:
+==58070== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7D9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb48 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6F1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== 
+==58070== 1 errors in context 3 of 5:
+==58070== Syscall param rt_sigaction(act->sa_flags) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7A2: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb38 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6E9: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== 
+==58070== 1 errors in context 4 of 5:
+==58070== Syscall param rt_sigaction(act->sa_mask) points to uninitialised byte(s)
+==58070==    at 0x48BB5F3: __libc_sigaction (libc_sigaction.c:58)
+==58070==    by 0x10A7A2: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==  Address 0x1ffefffb48 is on thread 1's stack
+==58070==  in frame #0, created by __libc_sigaction (libc_sigaction.c:43)
+==58070==  Uninitialised value was created by a stack allocation
+==58070==    at 0x10A6F1: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== 
+==58070== 17 errors in context 5 of 5:
+==58070== Thread 2:
+==58070== Conditional jump or move depends on uninitialised value(s)
+==58070==    at 0x484ED28: strlen (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x48EFD30: __vfprintf_internal (vfprintf-internal.c:1517)
+==58070==    by 0x4996FB9: __vsyslog_internal (syslog.c:229)
+==58070==    by 0x4997499: syslog (syslog.c:109)
+==58070==    by 0x10B197: joiner_handler (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070==    by 0x490DAC2: start_thread (pthread_create.c:442)
+==58070==    by 0x499EA03: clone (clone.S:100)
+==58070==  Uninitialised value was created by a heap allocation
+==58070==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==58070==    by 0x10AB9E: main (in /home/mueller4110/Documents/embedded_linux/assignment-2-almu6129/server/aesdsocket)
+==58070== 
+==58070== ERROR SUMMARY: 21 errors from 5 contexts (suppressed: 0 from 0)
