@@ -9,6 +9,7 @@ else
   DEBFLAGS = -O2
 endif
 
+ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 EXTRA_CFLAGS += $(DEBFLAGS)
 
 ifneq ($(KERNELRELEASE),)
