@@ -93,10 +93,13 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 
         buffer -> entry[buffer -> in_offs].buffptr = add_entry -> buffptr;
 
+        int prev_off = buffer -> in_offs;
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
 
         if(buffer -> in_offs == buffer -> out_offs){
-            buffer -> full = true;
+            if(prev_off < buffer -> out_offs || prev_off == (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED - 1)){
+                buffer -> full = true;
+            }
         }
     }
     return;
