@@ -150,7 +150,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             return -ENOMEM;
         }
 
-        retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size - 1], buf, count);
+        retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size], buf, count);
 
         //What was actually copied from user space
         retval = count - retval;
