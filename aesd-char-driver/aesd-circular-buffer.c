@@ -35,7 +35,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     }
 
     int8_t fill_level;
-    int total_count;
+    int total_count = 0;
 
     if(buffer -> full) fill_level = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     else{

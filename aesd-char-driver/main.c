@@ -227,6 +227,8 @@ int aesd_init_module(void)
         return -ENOMEM;
     }
 
+    aesd_circular_buffer_init(aesd_device.buf);
+
     aesd_device.ent = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
 
     if(aesd_device.ent == NULL){
