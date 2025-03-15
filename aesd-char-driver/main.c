@@ -74,7 +74,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //We are only doing partial reads. This will only
     //read up to one block (cb entry) of data.
-    retval = ret_ptr -> size - (spot_in_entry + 1);
+    retval = ret_ptr -> size - (spot_in_entry);
     
     //If we don't want to grab a whole block
     if(count < retval){
@@ -166,7 +166,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     
     //If we reached here we found a newline character
     void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
-
     //Clean up any blocks (cb entries) that were overwritten
     //because of it being a full buffer
     if(possible_to_be_freed != NULL){
