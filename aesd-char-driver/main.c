@@ -61,7 +61,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     if (mutex_lock_interruptible(&dev->lock))
 		return -ERESTARTSYS;
 
-    ret_ptr = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buf,
+    ret_ptr = aesd_circular_buffer_find_entry_offset_for_fpos(dev->buf,
                                                     *f_pos, &spot_in_entry);
 
 
@@ -69,7 +69,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     retval = ret_ptr -> size - (spot_in_entry + 1);                                           
     
-    retval = __copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval);
+    __copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval);
 
     *f_pos += retval;
 
@@ -95,7 +95,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		return -ERESTARTSYS;
 
     //The case where our last data write did complete
-    if(dev->ent.size == 0){
+    if(dev->ent->size == 0){
 
         char * alloc_mem = (char *)kmalloc(count, GFP_KERNEL);
 
@@ -110,8 +110,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //What was actually copied from user space
         retval = count - retval;
 
-        dev->ent.buffptr = alloc_mem;
-        dev->ent.size = retval;
+        dev->ent->buffptr = alloc_mem;
+        dev->ent->size = retval;
 
         //If we didn't reach the end of the command, return and wait for more data
         if(alloc_mem[retval - 1] != '\n'){
@@ -123,40 +123,41 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     else{
 
         //Calculate the new total size of the accumulated data
-        int new_size = count + dev->ent.size;
+        int new_size = count + dev->ent->size;
 
         //Append the data
-        dev->ent.buffptr = (char *)krealloc(dev->ent.buffptr, new_size, GFP_KERNEL);
+        dev->ent->buffptr = (char *)krealloc(dev->ent->buffptr, new_size, GFP_KERNEL);
 
-        if(dev->ent.buffptr == NULL){
+        if(dev->ent->buffptr == NULL){
             PDEBUG("Malloc Failed\n");
             mutex_unlock(&dev->lock);
             return -ENOMEM;
         }
 
-        retval = __copy_from_user((void *)&dev->ent.buffptr[dev->ent.size - 1], buf, count);
+        retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size - 1], buf, count);
 
         //What was actually copied from user space
         retval = count - retval;
 
-        dev->ent.size = new_size;
+        dev->ent->size = new_size;
 
         //If we didn't reach the end of the command, return and wait for more data
-        if(dev->ent.buffptr[new_size - 1] != '\n'){
+        if(dev->ent->buffptr[new_size - 1] != '\n'){
             mutex_unlock(&dev->lock);
             return retval;
         }
     }
     
     //If we reached here we found a newline character
-    void * possible_to_be_freed = aesd_circular_buffer_add_entry(&dev->buf, &dev->ent);
+    void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
 
     if(possible_to_be_freed != NULL){
         kfree(possible_to_be_freed);
     }
 
     //Reset the count local to the filp structure circular buffer entry
-    dev->ent.size = 0;
+    dev->ent->size = 0;
+    dev->ent->buffptr = NULL;
 
     mutex_unlock(&dev->lock);
     return retval;
@@ -173,10 +174,10 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 {
     int err, devno = MKDEV(aesd_major, aesd_minor);
 
-    cdev_init(&dev->cdev, &aesd_fops);
-    dev->cdev.owner = THIS_MODULE;
-    dev->cdev.ops = &aesd_fops;
-    err = cdev_add (&dev->cdev, devno, 1);
+    cdev_init(dev->cdev, &aesd_fops);
+    dev->cdev->owner = THIS_MODULE;
+    dev->cdev->ops = &aesd_fops;
+    err = cdev_add (dev->cdev, devno, 1);
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }
@@ -198,8 +199,35 @@ int aesd_init_module(void)
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
 
-    //Initialize the muxed we use for protecting the circular buffer
+    //Initialize the mutex we use for protecting the circular buffer
     mutex_init(&aesd_device.lock);
+
+    aesd_device.buf = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
+
+    if(aesd_device.buf == NULL){
+        unregister_chrdev_region(dev, 1);
+        return -ENOMEM;
+    }
+
+    aesd_device.ent = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
+
+    if(aesd_device.ent == NULL){
+        unregister_chrdev_region(dev, 1);
+        kfree(aesd_device.buf);
+        return -ENOMEM;
+    }
+
+    aesd_device.cdev = kmalloc(sizeof(struct cdev), GFP_KERNEL);
+
+    if(aesd_device.cdev == NULL){
+        unregister_chrdev_region(dev, 1);
+        kfree(aesd_device.buf);
+        kfree(aesd_device.ent);
+        return -ENOMEM;
+    }
+
+    aesd_device.ent->buffptr = NULL;
+    aesd_device.ent->size = 0;
 
     result = aesd_setup_cdev(&aesd_device);
 
@@ -214,11 +242,27 @@ void aesd_cleanup_module(void)
 {
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
-    cdev_del(&aesd_device.cdev);
+    cdev_del(aesd_device.cdev);
 
-    /**
-     * TODO: cleanup AESD specific poritions here as necessary
-     */
+    kfree(&aesd_device.lock);
+
+    for(int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++){
+        if(aesd_device.buf->entry[i].buffptr != NULL){
+            kfree(aesd_device.buf->entry[i].buffptr);
+            aesd_device.buf->entry[i].buffptr = NULL;
+            aesd_device.buf->entry[i].size = 0;
+        }
+    }
+
+    if(aesd_device.ent->buffptr != NULL){
+        kfree(aesd_device.ent->buffptr);
+        aesd_device.ent->buffptr = NULL;
+        aesd_device.ent->size = 0;
+    }
+
+    kfree(aesd_device.buf);
+    kfree(aesd_device.ent);
+    kfree(aesd_device.cdev);
 
     unregister_chrdev_region(devno, 1);
 }
