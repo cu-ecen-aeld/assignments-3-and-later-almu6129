@@ -149,7 +149,11 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
     
     //If we reached here we found a newline character
-    aesd_circular_buffer_add_entry(&dev->buf, &dev->ent);
+    void * possible_to_be_freed = aesd_circular_buffer_add_entry(&dev->buf, &dev->ent);
+
+    if(possible_to_be_freed != NULL){
+        kfree(possible_to_be_freed);
+    }
 
     //Reset the count local to the filp structure circular buffer entry
     dev->ent.size = 0;
