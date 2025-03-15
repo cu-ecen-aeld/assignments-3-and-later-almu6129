@@ -74,7 +74,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //We are only doing partial reads. This will only
     //read up to one block (cb entry) of data.
-    retval = ret_ptr -> size - (spot_in_entry);
+    retval = ret_ptr -> size - (spot_in_entry + 1);
     
     //If we don't want to grab a whole block
     if(count < retval){
@@ -129,7 +129,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         dev->ent->size = retval;
 
         //If we didn't reach the end of the command, return and wait for more data
-        if(alloc_mem[retval - 1] != '\n'){
+        if(memchr(dev->ent->buffptr, '\n', retval) == NULL){
             mutex_unlock(&dev->lock);
             return retval;
         }
@@ -140,7 +140,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //Calculate the new total size of the accumulated data
         int new_size = count + dev->ent->size;
 
-        //Append the data
+        //Resize the buffer. This function will copy the prev. data over as well as
+        //freeing any previous pointer
         dev->ent->buffptr = (char *)krealloc(dev->ent->buffptr, new_size, GFP_KERNEL);
 
         if(dev->ent->buffptr == NULL){
@@ -157,7 +158,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         dev->ent->size = new_size;
 
         //If we didn't reach the end of the command, return and wait for more data
-        if(dev->ent->buffptr[new_size - 1] != '\n'){
+        if(memchr(dev->ent->buffptr, '\n', new_size) == NULL){
             mutex_unlock(&dev->lock);
             return retval;
         }
@@ -166,6 +167,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //If we reached here we found a newline character
     void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
 
+    //Clean up any blocks (cb entries) that were overwritten
+    //because of it being a full buffer
     if(possible_to_be_freed != NULL){
         kfree(possible_to_be_freed);
     }
