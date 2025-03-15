@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #include "aesd-circular-buffer.h"
 #include <linux/fs.h> // file_operations
 #include "aesdchar.h"
@@ -65,11 +66,25 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                                                     *f_pos, &spot_in_entry);
 
 
-    if(ret_ptr == NULL) return 0;
+    if(ret_ptr == NULL){
+        //End of File
+        mutex_unlock(&dev->lock);
+        return 0;
+    }
 
-    retval = ret_ptr -> size - (spot_in_entry + 1);                                           
+    //We are only doing partial reads. This will only
+    //read up to one block (cb entry) of data.
+    retval = ret_ptr -> size - (spot_in_entry);
     
-    __copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval);
+    //If we don't want to grab a whole block
+    if(count < retval){
+        retval = count;
+    }
+    
+    if(__copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval) != 0){
+        mutex_unlock(&dev->lock);
+        return -EFAULT;
+    }
 
     *f_pos += retval;
 
