@@ -74,8 +74,8 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //We are only doing partial reads. This will only
     //read up to one block (cb entry) of data.
-    retval = ret_ptr -> size - (spot_in_entry);
-    
+    retval = ret_ptr -> size - (spot_in_entry + 1);
+
     //If we don't want to grab a whole block
     if(count < retval){
         retval = count;
@@ -152,10 +152,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
         retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size], buf, count);
 
+        dev->ent->size = (new_size - retval);
+
         //What was actually copied from user space
         retval = count - retval;
-
-        dev->ent->size = new_size;
 
         //If we didn't reach the end of the command, return and wait for more data
         if(memchr(dev->ent->buffptr, '\n', new_size) == NULL){
