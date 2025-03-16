@@ -75,12 +75,12 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     //We are only doing partial reads. This will only
     //read up to one block (cb entry) of data.
     retval = ret_ptr -> size - (spot_in_entry + 1);
-
+	PDEBUG("outputting: %s, with this size : %d", ret_ptr[spot_in_entry], retval);
     //If we don't want to grab a whole block
     if(count < retval){
         retval = count;
     }
-    
+
     if(__copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval) != 0){
         mutex_unlock(&dev->lock);
         return -EFAULT;
@@ -112,7 +112,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //The case where our last data write did complete
     if(dev->ent->size == 0){
 
-        char * alloc_mem = (char *)kmalloc(count, GFP_KERNEL);
+        char * alloc_mem = (char *)kmalloc(count + 1, GFP_KERNEL);
 
         if(alloc_mem == NULL){
             PDEBUG("Malloc Failed\n");
@@ -121,7 +121,11 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         }
 
         retval = __copy_from_user((void *)alloc_mem, buf, count);
-
+	
+        if(retval < 0){
+		mutex_unlock(&dev->lock);
+		return -EFAULT;
+	}
         //What was actually copied from user space
         retval = count - retval;
 
@@ -142,7 +146,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
         //Resize the buffer. This function will copy the prev. data over as well as
         //freeing any previous pointer
-        dev->ent->buffptr = (char *)krealloc(dev->ent->buffptr, new_size, GFP_KERNEL);
+        dev->ent->buffptr = (char *)krealloc(dev->ent->buffptr, new_size + 1, GFP_KERNEL);
 
         if(dev->ent->buffptr == NULL){
             PDEBUG("Malloc Failed\n");
@@ -151,7 +155,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         }
 
         retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size], buf, count);
-
+	if(retval < 0){
+		mutex_unlock(&dev->lock);
+		return -EFAULT;
+	}
         dev->ent->size = (new_size - retval);
 
         //What was actually copied from user space
@@ -162,9 +169,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             mutex_unlock(&dev->lock);
             return retval;
         }
-        dev->ent->buffptr[dev->ent->size] = '\0';
     }
     
+    dev->ent->buffptr[dev->ent->size] = '\0';
     //If we reached here we found a newline character
     void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
     PDEBUG("Writing : %s. With len: %d, and think size: %d", dev->ent->buffptr, strlen(dev->ent->buffptr), dev->ent->size);
