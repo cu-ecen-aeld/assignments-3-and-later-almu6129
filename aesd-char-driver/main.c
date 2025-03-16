@@ -205,10 +205,10 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 {
     int err, devno = MKDEV(aesd_major, aesd_minor);
 
-    cdev_init(dev->cdev, &aesd_fops);
-    dev->cdev->owner = THIS_MODULE;
-    dev->cdev->ops = &aesd_fops;
-    err = cdev_add (dev->cdev, devno, 1);
+    cdev_init(&dev->cdev, &aesd_fops);
+    dev->cdev.owner = THIS_MODULE;
+    dev->cdev.ops = &aesd_fops;
+    err = cdev_add (&dev->cdev, devno, 1);
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }
@@ -242,14 +242,6 @@ int aesd_init_module(void)
 
     aesd_circular_buffer_init(aesd_device.buf);
 
-    aesd_device.cdev = kmalloc(sizeof(struct cdev), GFP_KERNEL);
-
-    if(aesd_device.cdev == NULL){
-        unregister_chrdev_region(dev, 1);
-        kfree(aesd_device.buf);
-        return -ENOMEM;
-    }
-
     result = aesd_setup_cdev(&aesd_device);
 
     if( result ) {
@@ -263,7 +255,7 @@ void aesd_cleanup_module(void)
 {
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
-    cdev_del(aesd_device.cdev);
+    cdev_del(&aesd_device.cdev);
 
     kfree(&aesd_device.lock);
 
@@ -276,7 +268,6 @@ void aesd_cleanup_module(void)
     }
 
     kfree(aesd_device.buf);
-    kfree(aesd_device.cdev);
 
     unregister_chrdev_region(devno, 1);
 }
