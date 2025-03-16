@@ -110,7 +110,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		return -ERESTARTSYS;
 
     //The case where our last data write did complete
-    if(dev->ent->buffptr == NULL){
+    if(dev->ent == NULL){
 
         char * alloc_mem = (char *)kmalloc(count + 1, GFP_KERNEL);
 
@@ -123,6 +123,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         dev->ent = kmalloc(sizeof(struct aesd_buffer_entry), GFP_KERNEL);
 
         if(dev->ent == NULL){
+            mutex_unlock(&dev->lock);
             return -ENOMEM;
         }
 
@@ -184,11 +185,11 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //Clean up any blocks (cb entries) that were overwritten
     //because of it being a full buffer
     if(possible_to_be_freed != NULL){
-	kfree(possible_to_be_freed -> buffptr);
+	    kfree(possible_to_be_freed -> buffptr);
         kfree(possible_to_be_freed);
     }
 
-    dev->ent->buffptr = NULL;
+    dev->ent = NULL;
     mutex_unlock(&dev->lock);
     return retval;
 }
