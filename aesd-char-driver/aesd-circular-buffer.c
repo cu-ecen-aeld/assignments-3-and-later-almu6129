@@ -83,11 +83,9 @@ void *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const 
         buffer -> entry[buffer -> in_offs].size = add_entry -> size;
 
         void * item_to_free = (void *)buffer -> entry[buffer -> in_offs].buffptr;
-	buffer -> entry[buffer -> in_offs].buffptr = kmalloc(add_entry -> size, GFP_KERNEL);
 	
-        memcpy(buffer -> entry[buffer -> in_offs].buffptr, add_entry -> buffptr, add_entry -> size);
+        buffer -> entry[buffer -> in_offs].buffptr = add_entry -> buffptr;
 	
-	kfree(add_entry -> buffptr);
 
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
         buffer -> out_offs = ((buffer -> out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
