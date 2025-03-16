@@ -120,6 +120,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             return -ENOMEM;
         }
 
+        dev->ent = kmalloc(sizeof(struct aesd_buffer_entry), GFP_KERNEL);
+
+        if(dev->ent == NULL){
+            return -ENOMEM;
+        }
+
         retval = __copy_from_user((void *)alloc_mem, buf, count);
 	
         if(retval < 0){
@@ -237,20 +243,11 @@ int aesd_init_module(void)
 
     aesd_circular_buffer_init(aesd_device.buf);
 
-    aesd_device.ent = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
-
-    if(aesd_device.ent == NULL){
-        unregister_chrdev_region(dev, 1);
-        kfree(aesd_device.buf);
-        return -ENOMEM;
-    }
-
     aesd_device.cdev = kmalloc(sizeof(struct cdev), GFP_KERNEL);
 
     if(aesd_device.cdev == NULL){
         unregister_chrdev_region(dev, 1);
         kfree(aesd_device.buf);
-        kfree(aesd_device.ent);
         return -ENOMEM;
     }
 

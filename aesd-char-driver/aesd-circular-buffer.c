@@ -80,11 +80,10 @@ void *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const 
 
     /*Full buffer condition*/
     if((buffer -> in_offs == buffer -> out_offs) && (buffer -> full)){
-        buffer -> entry[buffer -> in_offs].size = add_entry -> size;
 
-        void * item_to_free = (void *)buffer -> entry[buffer -> in_offs].buffptr;
+        void * item_to_free = (void *)&buffer -> entry[buffer -> in_offs];
 	
-        buffer -> entry[buffer -> in_offs].buffptr = add_entry -> buffptr;
+        buffer -> entry[buffer -> in_offs] = *add_entry;
 	
 
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
@@ -94,9 +93,8 @@ void *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const 
     }
     /*Not full buffer condition*/
     else{
-        buffer -> entry[buffer -> in_offs].size = add_entry -> size;
 
-        buffer -> entry[buffer -> in_offs].buffptr = add_entry -> buffptr;
+        buffer -> entry[buffer -> in_offs] = *add_entry;
 
         int prev_off = buffer -> in_offs;
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
