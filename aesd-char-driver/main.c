@@ -74,14 +74,14 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //We are only doing partial reads. This will only
     //read up to one block (cb entry) of data.
-    retval = ret_ptr -> size - (spot_in_entry + 1);
+    retval = ret_ptr -> size - (spot_in_entry);
 	PDEBUG("outputting: %s, with this size : %d", ret_ptr[spot_in_entry], retval);
     //If we don't want to grab a whole block
     if(count < retval){
         retval = count;
     }
 
-    if(__copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval) != 0){
+    if(copy_to_user((void *)buf, &ret_ptr[spot_in_entry], retval) != 0){
         mutex_unlock(&dev->lock);
         return -EFAULT;
     }
@@ -127,7 +127,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             return -ENOMEM;
         }
 
-        retval = __copy_from_user((void *)alloc_mem, buf, count);
+        retval = copy_from_user((void *)alloc_mem, buf, count);
 	
         if(retval < 0){
 		mutex_unlock(&dev->lock);
@@ -161,7 +161,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             return -ENOMEM;
         }
 
-        retval = __copy_from_user((void *)&dev->ent->buffptr[dev->ent->size], buf, count);
+        retval = copy_from_user((void *)&dev->ent->buffptr[dev->ent->size], buf, count);
 	if(retval < 0){
 		mutex_unlock(&dev->lock);
 		return -EFAULT;
@@ -273,12 +273,6 @@ void aesd_cleanup_module(void)
             aesd_device.buf->entry[i].buffptr = NULL;
             aesd_device.buf->entry[i].size = 0;
         }
-    }
-
-    if(aesd_device.ent->buffptr != NULL){
-        kfree(aesd_device.ent->buffptr);
-        aesd_device.ent->buffptr = NULL;
-        aesd_device.ent->size = 0;
     }
 
     kfree(aesd_device.buf);

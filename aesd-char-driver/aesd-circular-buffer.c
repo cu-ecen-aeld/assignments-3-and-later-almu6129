@@ -83,7 +83,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_add_entry(struct aesd_circular_bu
 
         void * item_to_free = (void *)&buffer -> entry[buffer -> in_offs];
 	
-        memcpy(&buffer -> entry[buffer -> in_offs], add_entry, sizeof(struct aesd_buffer_entry));
+        buffer -> entry[buffer -> in_offs] = *add_entry;
 	
 
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
@@ -94,7 +94,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_add_entry(struct aesd_circular_bu
     /*Not full buffer condition*/
     else{
 
-        memcpy(&buffer -> entry[buffer -> in_offs], add_entry, sizeof(struct aesd_buffer_entry));
+        buffer -> entry[buffer -> in_offs] = *add_entry;
 
         int prev_off = buffer -> in_offs;
         buffer -> in_offs = ((buffer -> in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
