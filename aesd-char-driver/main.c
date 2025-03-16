@@ -157,8 +157,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //What was actually copied from user space
         retval = count - retval;
 
+	char * temp_spot;
         //If we didn't reach the end of the command, return and wait for more data
-        if(memchr(dev->ent->buffptr, '\n', new_size) == NULL){
+        if((memchr(dev->ent->buffptr, '\n', new_size)) == NULL){
             mutex_unlock(&dev->lock);
             return retval;
         }
@@ -166,6 +167,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     
     //If we reached here we found a newline character
     void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
+    PDEBUG("Writing : %s. With len: %d, and think size: %d", dev->ent->buffptr, strlen(dev->ent->buffptr), dev->ent->size);
     //Clean up any blocks (cb entries) that were overwritten
     //because of it being a full buffer
     if(possible_to_be_freed != NULL){
