@@ -4,8 +4,8 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #else
-#include <stddef.h> // size_t
-#include <stdint.h> // uintx_t
+#include <stddef.h>
+#include <stdint.h> 
 #include <stdbool.h>
 #endif
 

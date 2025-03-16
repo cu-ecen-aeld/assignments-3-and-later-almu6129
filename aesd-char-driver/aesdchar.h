@@ -18,10 +18,10 @@
 
 struct aesd_dev
 {
-    struct aesd_circular_buffer *cbuf;   
-    struct mutex *mutex;                  
-    char *pending_buf;                   
-    size_t pending_buf_size;               
+    struct aesd_circular_buffer *buf;   
+    struct mutex *lock;                  
+    char *ent;                   
+    size_t ent_size;               
     struct cdev *cdev;    
 };
 

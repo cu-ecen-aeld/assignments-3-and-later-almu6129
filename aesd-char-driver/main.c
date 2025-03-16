@@ -35,51 +35,63 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval = 0;
-    size_t total_size = 0;
-    size_t read_offset = *f_pos;
+    int total_num_bytes;
+    int read_off = *f_pos;
     struct aesd_dev *dev = filp->private_data;
     struct aesd_buffer_entry *entry;
-    size_t entry_offset = 0;
-    size_t bytes_available = 0;
-    size_t bytes_to_copy = 0;
-    size_t bytes_copied = 0;
-    int err;
+    int node_offset = 0;
+    int num_in_node = 0;
+    int final_num_bytes = 0;
+    int idx;
+    int num_nodes;
+
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
-    mutex_lock(dev->mutex);
+    mutex_lock(dev->lock);
 
-    {
-        int i;
-        int num_entries = dev->cbuf->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED :
-                           (dev->cbuf->in_offs - dev->cbuf->out_offs);
-        total_size = 0;
-        for (i = 0; i < num_entries; i++) {
-            int pos = (dev->cbuf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-            total_size += dev->cbuf->entry[pos].size;
+    if(dev->buf->full){
+        num_nodes = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    }
+    else{
+        num_nodes = (dev->buf->in_offs - dev->buf->out_offs);
+    }
+    
+    total_num_bytes = 0;
+
+    for (int i = 0; i < num_nodes; i++) {
+        idx = (dev->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+        total_num_bytes += dev->buf->entry[idx].size;
+    }
+
+    //end of file
+    if (read_off >= total_num_bytes) {
+        mutex_unlock(dev->lock);
+        return 0;
+    }
+
+    while (count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->buf, read_off, (size_t *)&node_offset)) != NULL) {
+
+        num_in_node = entry->size - node_offset;
+
+        if(count < num_in_node){
+            num_in_node = count;
         }
-    }
 
-    if (read_offset >= total_size) {
-        mutex_unlock(dev->mutex);
-        return 0; // EOF
-    }
-
-    while (count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->cbuf, read_offset, &entry_offset)) != NULL) {
-        bytes_available = entry->size - entry_offset;
-        bytes_to_copy = (count < bytes_available) ? count : bytes_available;
-        err = copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy);
-        if (err != 0) {
-            mutex_unlock(dev->mutex);
+        if (copy_to_user(buf, entry->buffptr + node_offset, num_in_node) != 0){
+            mutex_unlock(dev->lock);
             return -EFAULT;
         }
-        buf += bytes_to_copy;
-        count -= bytes_to_copy;
-        read_offset += bytes_to_copy;
-        bytes_copied += bytes_to_copy;
-           }
-    *f_pos = read_offset;
-    mutex_unlock(dev->mutex);
-    retval = bytes_copied;
-    return retval;
+
+        buf += num_in_node;
+        count -= num_in_node;
+        read_off += num_in_node;
+        final_num_bytes += num_in_node;
+    }
+
+    *f_pos = read_off;
+
+    mutex_unlock(dev->lock);
+
+    return final_num_bytes;
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
@@ -87,80 +99,87 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 {
     ssize_t retval = -ENOMEM;
     struct aesd_dev *dev = filp->private_data;
-    char *kern_buf = NULL;
-    char *new_cmd = NULL;
-    size_t total_len;
-    char *newline_ptr = NULL;
-    size_t write_offset = 0;
+    char *temp_buffer = NULL;
+    int accum_len;
+    char *newline = NULL;
+    int node_offset = 0;
 
     PDEBUG("write %zu bytes with offset %lld", count, *f_pos);
 
-    kern_buf = kmalloc(count, GFP_KERNEL);
-    if (!kern_buf)
+    temp_buffer = kmalloc(count, GFP_KERNEL);
+
+    if(temp_buffer == NULL){
         return -ENOMEM;
-    if (copy_from_user(kern_buf, buf, count)) {
-        kfree(kern_buf);
+    }
+    if(copy_from_user(temp_buffer, buf, count)) {
+        kfree(temp_buffer);
         return -EFAULT;
     }
 
-    mutex_lock(dev->mutex);
+    mutex_lock(dev->lock);
 
-    total_len = dev->pending_buf_size + count;
-    new_cmd = kmalloc(total_len, GFP_KERNEL);
-    if (!new_cmd) {
-        kfree(kern_buf);
-        mutex_unlock(dev->mutex);
+    accum_len = dev->ent_size + count;
+    newline = kmalloc(accum_len, GFP_KERNEL);
+    if(newline == NULL){
+        kfree(temp_buffer);
+        mutex_unlock(dev->lock);
         return -ENOMEM;
     }
-    if (dev->pending_buf) {
-        memcpy(new_cmd, dev->pending_buf, dev->pending_buf_size);
-        kfree(dev->pending_buf);
+    if(dev->ent){
+        memcpy(newline, dev->ent, dev->ent_size);
+        kfree(dev->ent);
     }
-    memcpy(new_cmd + dev->pending_buf_size, kern_buf, count);
-    kfree(kern_buf);
-    dev->pending_buf = new_cmd;
-    dev->pending_buf_size = total_len;
 
-    while ((newline_ptr = memchr(dev->pending_buf + write_offset, '\n', dev->pending_buf_size - write_offset)) != NULL) {
-        size_t cmd_length = newline_ptr - (dev->pending_buf + write_offset) + 1;
-        char *cmd_buf = kmalloc(cmd_length, GFP_KERNEL);
-        if (!cmd_buf) {
-            mutex_unlock(dev->mutex);
+    memcpy(newline + dev->ent_size, temp_buffer, count);
+    kfree(temp_buffer);
+
+    dev->ent = newline;
+    dev->ent_size = accum_len;
+
+    while((newline = memchr(dev->ent + node_offset, '\n', dev->ent_size - node_offset)) != NULL){
+
+        int tot_len = newline - (dev->ent + node_offset) + 1;
+        char *tmp_buf = kmalloc(tot_len, GFP_KERNEL);
+        if(tmp_buf == NULL){
+            mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-        memcpy(cmd_buf, dev->pending_buf + write_offset, cmd_length);
+        memcpy(tmp_buf, dev->ent + node_offset, tot_len);
+        struct aesd_buffer_entry new_node;
+        new_node.buffptr = tmp_buf;
+        new_node.size = tot_len;
 
-        {
-            struct aesd_buffer_entry new_entry;
-            new_entry.buffptr = cmd_buf;
-            new_entry.size = cmd_length;
+        const char *prev_line = aesd_circular_buffer_add_entry(dev->buf, &new_node);
 
-            const char *old_cmd = aesd_circular_buffer_add_entry(dev->cbuf, &new_entry);
-            if (old_cmd)
-                kfree(old_cmd);
+        if(prev_line != NULL){
+            kfree(prev_line);
         }
-        write_offset += cmd_length;
+
+        node_offset += tot_len;
     }
 
-    if (write_offset < dev->pending_buf_size) {
-        size_t leftover = dev->pending_buf_size - write_offset;
-        char *temp_buf = kmalloc(leftover, GFP_KERNEL);
-        if (!temp_buf) {
-            mutex_unlock(dev->mutex);
+    if(node_offset < dev->ent_size) {
+        int num_bytes_in_node = dev->ent_size - node_offset;
+
+        char *temp_buf = kmalloc(num_bytes_in_node, GFP_KERNEL);
+
+        if(temp_buf == NULL){
+            mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-        memcpy(temp_buf, dev->pending_buf + write_offset, leftover);
-        kfree(dev->pending_buf);
-        dev->pending_buf = temp_buf;
-        dev->pending_buf_size = leftover;
-    } else {
-        kfree(dev->pending_buf);
-        dev->pending_buf = NULL;
-        dev->pending_buf_size = 0;
+        memcpy(temp_buf, dev->ent + node_offset, num_bytes_in_node);
+        kfree(dev->ent);
+        dev->ent = temp_buf;
+        dev->ent_size = num_bytes_in_node;
+    }else{
+
+        kfree(dev->ent);
+        dev->ent = NULL;
+        dev->ent_size = 0;
     }
-    mutex_unlock(dev->mutex);
-    retval = count;
-    return retval;
+    mutex_unlock(dev->lock);
+
+    return count;
 }
 
 struct file_operations aesd_fops = {
@@ -198,24 +217,35 @@ int aesd_init_module(void)
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
 
-    aesd_device.mutex = kmalloc(sizeof(struct mutex), GFP_KERNEL);
-	if (!aesd_device.mutex) {
+    aesd_device.lock = kmalloc(sizeof(struct mutex), GFP_KERNEL);
+
+	if (aesd_device.lock == NULL) {
     	return -ENOMEM;
     }
-    mutex_init(aesd_device.mutex);
-    aesd_device.cbuf = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
-    if (!aesd_device.cbuf) {
+
+    mutex_init(aesd_device.lock);
+
+    aesd_device.buf = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
+
+    if (aesd_device.buf == NULL) {
+
         unregister_chrdev_region(dev, 1);
         return -ENOMEM;
+
     }
-    aesd_circular_buffer_init(aesd_device.cbuf);
-    aesd_device.pending_buf = NULL;
-    aesd_device.pending_buf_size = 0;
+
+    aesd_circular_buffer_init(aesd_device.buf);
+
+    aesd_device.ent = NULL;
+    aesd_device.ent_size = 0;
 
     aesd_device.cdev = kmalloc(sizeof(struct cdev), GFP_KERNEL);
-    if (!aesd_device.cdev) {
+
+    if (aesd_device.cdev == NULL) {
+
         unregister_chrdev_region(dev, 1);
         return -ENOMEM;
+
     }
     result = aesd_setup_cdev(&aesd_device);
 
@@ -232,22 +262,30 @@ void aesd_cleanup_module(void)
 
     cdev_del(aesd_device.cdev);
 
-    kfree(aesd_device.mutex);
+    kfree(aesd_device.lock);
+
     for (int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
-        if (aesd_device.cbuf->entry[i].buffptr) {
-            kfree(aesd_device.cbuf->entry[i].buffptr);
-            aesd_device.cbuf->entry[i].buffptr = NULL;
-            aesd_device.cbuf->entry[i].size = 0;
+
+        if (aesd_device.buf->entry[i].buffptr) {
+
+            kfree(aesd_device.buf->entry[i].buffptr);
+            aesd_device.buf->entry[i].buffptr = NULL;
+            aesd_device.buf->entry[i].size = 0;
+
         }
     }
 
-    if (aesd_device.pending_buf) {
-        kfree(aesd_device.pending_buf);
-        aesd_device.pending_buf = NULL;
-        aesd_device.pending_buf_size = 0;
+    if (aesd_device.ent) {
+
+        kfree(aesd_device.ent);
+        aesd_device.ent = NULL;
+        aesd_device.ent_size = 0;
+
     }
-    kfree(aesd_device.cbuf);
+
+    kfree(aesd_device.buf);
     kfree(aesd_device.cdev);
+
     unregister_chrdev_region(devno, 1);
 }
 

@@ -13,32 +13,33 @@
  * @param entry_offset_byte_rtn is a pointer specifying a location to store the byte of the returned aesd_buffer_entry
  *      buffptr member corresponding to char_offset.  This value is only set when a matching char_offset is found
  *      in aesd_buffer.
- * @return the struct aesd_buffer_entry structure representing the position described by char_offset, or
- * NULL if this position is not available in the buffer (not enough data is written).
+ * @return the struct aesd_buffer_entry 
  */
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    uint8_t idx = buffer->out_offs;
-    size_t cumulative_size = 0;
-    uint8_t entries_checked = 0;
+    int j = buffer->out_offs;
+    int total_num = 0;
+    int num_nodes = 0;
 
+    while (num_nodes < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
 
-    while (entries_checked < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
-
-        if ((!buffer->full) && (idx == buffer->in_offs)) {
+        if ((!buffer->full) && (j == buffer->in_offs)) {
             break;
         }
 
-        if (char_offset < (cumulative_size + buffer->entry[idx].size)) {
+        if (char_offset < (total_num + buffer->entry[j].size)) {
 
-            *entry_offset_byte_rtn = char_offset - cumulative_size;
-            return &buffer->entry[idx];
+            *entry_offset_byte_rtn = char_offset - total_num;
+
+            return &buffer->entry[j];
         }
 
-        cumulative_size += buffer->entry[idx].size;
-        idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-        entries_checked++;
+        total_num += buffer->entry[j].size;
+
+        j = (j + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+        num_nodes++;
     }
 
 
@@ -51,15 +52,15 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * new start location.
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
-* @return NULL or, if an existing entry at out_offs was replaced, the value of buffptr for the entry
-* which was replaced (for use with dynamic memory allocation/freeing)
+* @return NULL or the pointer to the node that was overwritten
 */
 const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
-    const char *replaced_ptr = NULL;
+    const char *overwritten_node = NULL;
+
     if (buffer->full) {
 
-        replaced_ptr = buffer->entry[buffer->out_offs].buffptr;
+        overwritten_node = buffer->entry[buffer->out_offs].buffptr;
 
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
@@ -68,13 +69,18 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
 
     buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
 
+    //If we are equal after the incrementation it means we are now full
     if (buffer->in_offs == buffer->out_offs) {
+
         buffer->full = true;
+
     } else {
+
         buffer->full = false;
+
     }
 
-    return replaced_ptr;
+    return overwritten_node;
 }
 
 /**
