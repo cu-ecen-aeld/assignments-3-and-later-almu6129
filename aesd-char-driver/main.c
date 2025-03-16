@@ -110,7 +110,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		return -ERESTARTSYS;
 
     //The case where our last data write did complete
-    if(dev->ent->size == 0){
+    if(dev->ent->buffptr == NULL){
 
         char * alloc_mem = (char *)kmalloc(count + 1, GFP_KERNEL);
 
@@ -179,18 +179,16 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     
     dev->ent->buffptr[dev->ent->size] = '\0';
     //If we reached here we found a newline character
-    void * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
+    struct aesd_buffer_entry * possible_to_be_freed = aesd_circular_buffer_add_entry(dev->buf, dev->ent);
     PDEBUG("Writing : %s. With len: %d, and think size: %d", dev->ent->buffptr, strlen(dev->ent->buffptr), dev->ent->size);
     //Clean up any blocks (cb entries) that were overwritten
     //because of it being a full buffer
     if(possible_to_be_freed != NULL){
+	kfree(possible_to_be_freed -> buffptr);
         kfree(possible_to_be_freed);
     }
 
-    //Reset the count local to the filp structure circular buffer entry
-    dev->ent->size = 0;
     dev->ent->buffptr = NULL;
-
     mutex_unlock(&dev->lock);
     return retval;
 }
@@ -251,9 +249,6 @@ int aesd_init_module(void)
         return -ENOMEM;
     }
 
-    aesd_device.ent->buffptr = NULL;
-    aesd_device.ent->size = 0;
-
     result = aesd_setup_cdev(&aesd_device);
 
     if( result ) {
@@ -286,7 +281,6 @@ void aesd_cleanup_module(void)
     }
 
     kfree(aesd_device.buf);
-    kfree(aesd_device.ent);
     kfree(aesd_device.cdev);
 
     unregister_chrdev_region(devno, 1);
