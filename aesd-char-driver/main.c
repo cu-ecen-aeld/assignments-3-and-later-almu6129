@@ -3,11 +3,11 @@
 #include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/cdev.h>
-#include <linux/fs.h> // file_operations
+#include <linux/fs.h> 
 #include "aesdchar.h"
 #include "aesd-circular-buffer.h"
 
-int aesd_major =   0; // use dynamic major
+int aesd_major =   0;
 int aesd_minor =   0;
 
 MODULE_AUTHOR("Alex Mueller");
@@ -46,7 +46,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     int err;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
     mutex_lock(dev->mutex);
-    // Calculate total size of all entries in the circular buffer
+
     {
         int i;
         int num_entries = dev->cbuf->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED :
@@ -63,7 +63,6 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         return 0; // EOF
     }
 
-    // Use helper to locate the entry for current offset and copy out data
     while (count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->cbuf, read_offset, &entry_offset)) != NULL) {
         bytes_available = entry->size - entry_offset;
         bytes_to_copy = (count < bytes_available) ? count : bytes_available;
@@ -105,7 +104,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
 
     mutex_lock(dev->mutex);
-    // Append new data to any existing pending data
+
     total_len = dev->pending_buf_size + count;
     new_cmd = kmalloc(total_len, GFP_KERNEL);
     if (!new_cmd) {
@@ -122,7 +121,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     dev->pending_buf = new_cmd;
     dev->pending_buf_size = total_len;
 
-    // Process complete commands terminated by '\n'
     while ((newline_ptr = memchr(dev->pending_buf + write_offset, '\n', dev->pending_buf_size - write_offset)) != NULL) {
         size_t cmd_length = newline_ptr - (dev->pending_buf + write_offset) + 1;
         char *cmd_buf = kmalloc(cmd_length, GFP_KERNEL);
@@ -136,7 +134,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
             struct aesd_buffer_entry new_entry;
             new_entry.buffptr = cmd_buf;
             new_entry.size = cmd_length;
-            // Add the entry and capture any replaced pointer
+
             const char *old_cmd = aesd_circular_buffer_add_entry(dev->cbuf, &new_entry);
             if (old_cmd)
                 kfree(old_cmd);
@@ -144,7 +142,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         write_offset += cmd_length;
     }
 
-    // Handle incomplete command at the end
     if (write_offset < dev->pending_buf_size) {
         size_t leftover = dev->pending_buf_size - write_offset;
         char *temp_buf = kmalloc(leftover, GFP_KERNEL);
@@ -188,8 +185,6 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     return err;
 }
 
-
-
 int aesd_init_module(void)
 {
     dev_t dev = 0;
@@ -203,7 +198,6 @@ int aesd_init_module(void)
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
 
-    // Initialize the AESD specific portion of the device
     aesd_device.mutex = kmalloc(sizeof(struct mutex), GFP_KERNEL);
 	if (!aesd_device.mutex) {
     	return -ENOMEM;
@@ -238,7 +232,6 @@ void aesd_cleanup_module(void)
 
     cdev_del(aesd_device.cdev);
 
-    // Cleanup AESD specific poritions - circular buffer and pending buffer
     kfree(aesd_device.mutex);
     for (int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
         if (aesd_device.cbuf->entry[i].buffptr) {
@@ -247,7 +240,7 @@ void aesd_cleanup_module(void)
             aesd_device.cbuf->entry[i].size = 0;
         }
     }
-    // Free any pending buffer
+
     if (aesd_device.pending_buf) {
         kfree(aesd_device.pending_buf);
         aesd_device.pending_buf = NULL;

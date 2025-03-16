@@ -18,6 +18,14 @@
 #define PORT_NUM 9000
 #define BUFSIZE 512
 
+#define USE_AESD_CHAR_DEVICE 1
+
+#ifdef USE_AESD_CHAR_DEVICE
+	#define FILE_LOCATION "/dev/aesdchar"
+#else
+	#define FILE_LOCATION "/var/tmp/aesdsocketdata"
+#endif
+
 struct thread_context_t
 {
 	char ip_add[30];
@@ -58,7 +66,10 @@ int main(int argc, char * argv[]){
 	struct sigaction sa;
 	stop_flag = 0;
 	pthread_t garbage_collector_thread;
+
+	#ifndef USE_AESD_CHAR_DEVICE
 	pthread_t timer_thread;
+	#endif
 
 	pthread_mutex_t file_mutex;
 	pthread_mutex_init(&file_mutex, NULL);
@@ -154,6 +165,7 @@ int main(int argc, char * argv[]){
 			return -1;
 		}
 
+		#ifndef USE_AESD_CHAR_DEVICE
 		thread_context * timer_thread_info = (thread_context *)malloc(sizeof(thread_context));
 
 		if(timer_thread_info == NULL){
@@ -168,7 +180,7 @@ int main(int argc, char * argv[]){
 			perror("could not create thread");
 			return -1;
 		}
-		
+		#endif
 		int c = sizeof(struct sockaddr_in);
 
 		while(1 && !stop_flag){
@@ -219,7 +231,9 @@ int main(int argc, char * argv[]){
 	}
 
 	pthread_join(garbage_collector_thread, NULL);
+	#ifndef USE_AESD_CHAR_DEVICE
 	pthread_cancel(timer_thread);
+	#endif
 
 	closelog();
 
@@ -236,7 +250,7 @@ void *response_handler(void *thread_info){
 	int found_terminator;
 	int bytes_read;
 
-	int fd = open("/var/tmp/aesdsocketdata", O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	int fd = open(FILE_LOCATION, O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 	if(fd == -1){
 		perror("error with open");
@@ -334,6 +348,7 @@ void *joiner_handler(void *arr){
 	}
 }
 
+#ifndef USE_AESD_CHAR_DEVICE
 void *timer_handler(void *thread_info){
 
 	thread_context * total_context = (thread_context *)thread_info;
@@ -374,12 +389,15 @@ void *timer_handler(void *thread_info){
 	close(fd);
 
 }
+#endif
 
 void signal_handler(int signal_num) {
     syslog(LOG_INFO, "Caught signal, exiting\n");
 	//I don't think there is contention over this stop flag.
     stop_flag = 1;
+	#ifndef USE_AESD_CHAR_DEVICE
 	system("rm -f /var/tmp/aesdsocketdata");
+	#endif
 	return;
 }
 
