@@ -60,7 +60,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         return 0;
     }
 
-    while(count > 0 && (entry = aesd_circular_buffer_find_spot_in_node_for_fpos(dev->buf, new_fpos, &spot_in_node)) != NULL){
+    while(count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->buf, new_fpos, &spot_in_node)) != NULL){
         avail_in_node_rem = entry->size - spot_in_node;
         final_copy_num = (count < avail_in_node_rem) ? count : avail_in_node_rem;
         if(copy_to_user(buf, entry->buffptr + spot_in_node, final_copy_num) != 0){
