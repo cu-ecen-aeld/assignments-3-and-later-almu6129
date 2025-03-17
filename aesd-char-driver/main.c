@@ -46,16 +46,18 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     int final_num_copy_bytes = 0;
     int accum_num_copy_bytes = 0;
 
+    int num_nodes = 0;
+
     int wrapped_idx;
 
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 
     mutex_lock(device->lock);
     
-    if(device->buf->full) num_entries = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-    else num_entries = (device->buf->in_offs - device->buf->out_offs);
+    if(device->buf->full) num_nodes = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    else num_nodes = (device->buf->in_offs - device->buf->out_offs);
 
-    for (int i = 0; i < num_entries; i++){
+    for (int i = 0; i < num_nodes; i++){
 
         wrapped_idx = (device->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
 
@@ -68,7 +70,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         return 0;
     }
 
-    while((entry = aesd_circular_buffer_find_entry_offset_for_fpos(device->buf, updated_fpos, &node_offset)) != NULL && count > 0){
+    while((entry = aesd_circular_buffer_find_entry_offset_for_fpos(device->buf, updated_fpos, (size_t *)&node_offset)) != NULL && count > 0){
 
         bytes_available = entry->size - node_offset;
 
