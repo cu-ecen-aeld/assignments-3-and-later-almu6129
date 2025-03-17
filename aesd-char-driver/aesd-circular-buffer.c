@@ -24,11 +24,11 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 
     while (num_nodes < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
 
-        if ((!buffer->full) && (j == buffer->in_offs)) {
+        if((!buffer->full) && (j == buffer->in_offs)){
             break;
         }
 
-        if (char_offset < (total_num + buffer->entry[j].size)) {
+        if(char_offset < (total_num + buffer->entry[j].size)){
 
             *entry_offset_byte_rtn = char_offset - total_num;
 

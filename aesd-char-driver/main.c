@@ -34,160 +34,136 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    int num_bytes_in_buf = 0;
-    int updated_fpos = *f_pos;
-
-    struct aesd_dev *device = filp->private_data;
+    ssize_t retval = 0;
+    size_t total_size = 0;
+    size_t read_offset = *f_pos;
+    struct aesd_dev *dev = filp->private_data;
     struct aesd_buffer_entry *entry;
-
-    int node_offset = 0;
-    int bytes_available = 0;
-    int final_num_copy_bytes = 0;
-    int accum_num_copy_bytes = 0;
-
-    int num_nodes = 0;
-
-    int wrapped_idx;
-
+    size_t entry_offset = 0;
+    size_t bytes_available = 0;
+    size_t bytes_to_copy = 0;
+    size_t bytes_copied = 0;
+    int err;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
-
-    mutex_lock(device->lock);
-    
-    if(device->buf->full) num_nodes = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-    else num_nodes = (device->buf->in_offs - device->buf->out_offs);
-
-    for (int i = 0; i < num_nodes; i++){
-
-        wrapped_idx = (device->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-
-        num_bytes_in_buf += device->buf->entry[wrapped_idx].size;
+    mutex_lock(dev->lock);
+    // Calculate total size of all entries in the circular buffer
+    {
+        int i;
+        int num_entries = dev->buf->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED :
+                           (dev->buf->in_offs - dev->buf->out_offs);
+        total_size = 0;
+        for (i = 0; i < num_entries; i++) {
+            int pos = (dev->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+            total_size += dev->buf->entry[pos].size;
+        }
     }
 
-    //end of file condition
-    if (updated_fpos >= num_bytes_in_buf){
-        mutex_unlock(device->lock);
-        return 0;
+    if (read_offset >= total_size) {
+        mutex_unlock(dev->lock);
+        return 0; // EOF
     }
 
-    while((entry = aesd_circular_buffer_find_entry_offset_for_fpos(device->buf, updated_fpos, (size_t *)&node_offset)) != NULL && count > 0){
-
-        bytes_available = entry->size - node_offset;
-
-        //If we want collect less than a full node
-        if(count < bytes_available) final_num_copy_bytes = count;
-        else final_num_copy_bytes = bytes_available;
-
-        if (__copy_to_user(buf, entry->buffptr + node_offset, final_num_copy_bytes) != 0){
-            mutex_unlock(device->lock);
+    // Use helper to locate the entry for current offset and copy out data
+    while (count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->buf, read_offset, &entry_offset)) != NULL) {
+        bytes_available = entry->size - entry_offset;
+        bytes_to_copy = (count < bytes_available) ? count : bytes_available;
+        err = copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy);
+        if (err != 0) {
+            mutex_unlock(dev->lock);
             return -EFAULT;
         }
-
-        buf += final_num_copy_bytes;
-        count -= final_num_copy_bytes;
-        updated_fpos += final_num_copy_bytes;
-        accum_num_copy_bytes += final_num_copy_bytes;
-
-    }
-
-    *f_pos = updated_fpos;
-    mutex_unlock(device->lock);
-    return accum_num_copy_bytes;
+        buf += bytes_to_copy;
+        count -= bytes_to_copy;
+        read_offset += bytes_to_copy;
+        bytes_copied += bytes_to_copy;
+           }
+    *f_pos = read_offset;
+    mutex_unlock(dev->lock);
+    retval = bytes_copied;
+    return retval;
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    struct aesd_dev *device = filp->private_data;
-
-    char *temp_buffer = NULL;
-    char *node_data = NULL;
-
-    int accum_length;
-
+    ssize_t retval = -ENOMEM;
+    struct aesd_dev *dev = filp->private_data;
+    char *kern_buf = NULL;
+    char *new_cmd = NULL;
+    size_t total_len;
     char *newline_ptr = NULL;
-
     size_t write_offset = 0;
 
     PDEBUG("write %zu bytes with offset %lld", count, *f_pos);
 
-    temp_buffer = kmalloc(count, GFP_KERNEL);
-    if (temp_buffer == NULL) return -ENOMEM;
-
-    if (copy_from_user(temp_buffer, buf, count)){
-        kfree(temp_buffer);
+    kern_buf = kmalloc(count, GFP_KERNEL);
+    if (!kern_buf)
+        return -ENOMEM;
+    if (copy_from_user(kern_buf, buf, count)) {
+        kfree(kern_buf);
         return -EFAULT;
     }
 
-    mutex_lock(device->lock);
-
-    accum_length = device->ent_size + count;
-
-    node_data = kmalloc(accum_length, GFP_KERNEL);
-
-    if(node_data == NULL){
-
-        kfree(temp_buffer);
-        mutex_unlock(device->lock);
+    mutex_lock(dev->lock);
+    // Append new data to any existing pending data
+    total_len = dev->ent_size + count;
+    new_cmd = kmalloc(total_len, GFP_KERNEL);
+    if (!new_cmd) {
+        kfree(kern_buf);
+        mutex_unlock(dev->lock);
         return -ENOMEM;
-
     }
-    if(device->ent){
-
-        memcpy(node_data, device->ent, device->ent_size);
-        kfree(device->ent);
+    if (dev->ent) {
+        memcpy(new_cmd, dev->ent, dev->ent_size);
+        kfree(dev->ent);
     }
-    memcpy(node_data + device->ent_size, temp_buffer, count);
-    kfree(temp_buffer);
+    memcpy(new_cmd + dev->ent_size, kern_buf, count);
+    kfree(kern_buf);
+    dev->ent = new_cmd;
+    dev->ent_size = total_len;
 
-    device->ent = node_data;
-    device->ent_size = accum_length;
-
-    while((newline_ptr = memchr(device->ent + write_offset, '\n', device->ent_size - write_offset)) != NULL){
-
-        size_t cmd_length = newline_ptr - (device->ent + write_offset) + 1;
+    // Process complete commands terminated by '\n'
+    while ((newline_ptr = memchr(dev->ent + write_offset, '\n', dev->ent_size - write_offset)) != NULL) {
+        size_t cmd_length = newline_ptr - (dev->ent + write_offset) + 1;
         char *cmd_buf = kmalloc(cmd_length, GFP_KERNEL);
-        if(!cmd_buf){
-            mutex_unlock(device->lock);
+        if (!cmd_buf) {
+            mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-        memcpy(cmd_buf, device->ent + write_offset, cmd_length);
+        memcpy(cmd_buf, dev->ent + write_offset, cmd_length);
 
-
-        struct aesd_buffer_entry new_entry;
-        new_entry.buffptr = cmd_buf;
-        new_entry.size = cmd_length;
-
-        const char *old_cmd = aesd_circular_buffer_add_entry(device->buf, &new_entry);
-        if (old_cmd)
-            kfree(old_cmd);
-
+        {
+            struct aesd_buffer_entry new_entry;
+            new_entry.buffptr = cmd_buf;
+            new_entry.size = cmd_length;
+            // Add the entry and capture any replaced pointer
+            const char *old_cmd = aesd_circular_buffer_add_entry(dev->buf, &new_entry);
+            if (old_cmd)
+                kfree(old_cmd);
+        }
         write_offset += cmd_length;
     }
 
-    if(write_offset < device->ent_size){
-
-        size_t leftover = device->ent_size - write_offset;
-
+    // Handle incomplete command at the end
+    if (write_offset < dev->ent_size) {
+        size_t leftover = dev->ent_size - write_offset;
         char *temp_buf = kmalloc(leftover, GFP_KERNEL);
         if (!temp_buf) {
-            mutex_unlock(device->lock);
+            mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-
-        memcpy(temp_buf, device->ent + write_offset, leftover);
-        kfree(device->ent);
-        device->ent = temp_buf;
-        device->ent_size = leftover;
-
-    }else{
-
-        kfree(device->ent);
-        device->ent = NULL;
-        device->ent_size = 0;
+        memcpy(temp_buf, dev->ent + write_offset, leftover);
+        kfree(dev->ent);
+        dev->ent = temp_buf;
+        dev->ent_size = leftover;
+    } else {
+        kfree(dev->ent);
+        dev->ent = NULL;
+        dev->ent_size = 0;
     }
-
-    mutex_unlock(device->lock);
-    return count;
+    mutex_unlock(dev->lock);
+    retval = count;
+    return retval;
 }
 
 struct file_operations aesd_fops = {
@@ -212,6 +188,8 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     return err;
 }
 
+
+
 int aesd_init_module(void)
 {
     dev_t dev = 0;
@@ -225,35 +203,25 @@ int aesd_init_module(void)
     }
     memset(&aesd_device,0,sizeof(struct aesd_dev));
 
+    // Initialize the AESD specific portion of the device
     aesd_device.lock = kmalloc(sizeof(struct mutex), GFP_KERNEL);
-
-	if (aesd_device.lock == NULL) {
+	if (!aesd_device.lock) {
     	return -ENOMEM;
     }
-
     mutex_init(aesd_device.lock);
-
     aesd_device.buf = kmalloc(sizeof(struct aesd_circular_buffer), GFP_KERNEL);
-
-    if (aesd_device.buf == NULL) {
-
+    if (!aesd_device.buf) {
         unregister_chrdev_region(dev, 1);
         return -ENOMEM;
-
     }
-
     aesd_circular_buffer_init(aesd_device.buf);
-
     aesd_device.ent = NULL;
     aesd_device.ent_size = 0;
 
     aesd_device.cdev = kmalloc(sizeof(struct cdev), GFP_KERNEL);
-
-    if (aesd_device.cdev == NULL) {
-
+    if (!aesd_device.cdev) {
         unregister_chrdev_region(dev, 1);
         return -ENOMEM;
-
     }
     result = aesd_setup_cdev(&aesd_device);
 
@@ -270,30 +238,23 @@ void aesd_cleanup_module(void)
 
     cdev_del(aesd_device.cdev);
 
+    // Cleanup AESD specific poritions - circular buffer and pending buffer
     kfree(aesd_device.lock);
-
     for (int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
-
         if (aesd_device.buf->entry[i].buffptr) {
-
             kfree(aesd_device.buf->entry[i].buffptr);
             aesd_device.buf->entry[i].buffptr = NULL;
             aesd_device.buf->entry[i].size = 0;
-
         }
     }
-
+    // Free any pending buffer
     if (aesd_device.ent) {
-
         kfree(aesd_device.ent);
         aesd_device.ent = NULL;
         aesd_device.ent_size = 0;
-
     }
-
     kfree(aesd_device.buf);
     kfree(aesd_device.cdev);
-
     unregister_chrdev_region(devno, 1);
 }
 
