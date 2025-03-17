@@ -34,7 +34,6 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = 0;
     int num_bytes_in_buf = 0;
     int updated_fpos = *f_pos;
 
@@ -98,88 +97,96 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = -ENOMEM;
     struct aesd_dev *device = filp->private_data;
+
     char *temp_buffer = NULL;
-    int accum_len;
-    char *newline = NULL;
-    int node_offset = 0;
+    char *node_data = NULL;
+
+    int accum_length;
+
+    char *newline_ptr = NULL;
+
+    size_t write_offset = 0;
 
     PDEBUG("write %zu bytes with offset %lld", count, *f_pos);
 
     temp_buffer = kmalloc(count, GFP_KERNEL);
+    if (temp_buffer == NULL) return -ENOMEM;
 
-    if(temp_buffer == NULL){
-        return -ENOMEM;
-    }
-    if(__copy_from_user(temp_buffer, buf, count)) {
+    if (copy_from_user(temp_buffer, buf, count)){
         kfree(temp_buffer);
         return -EFAULT;
     }
 
     mutex_lock(device->lock);
 
-    accum_len = device->ent_size + count;
-    newline = kmalloc(accum_len, GFP_KERNEL);
-    if(newline == NULL){
+    accum_length = device->ent_size + count;
+
+    node_data = kmalloc(accum_length, GFP_KERNEL);
+
+    if(node_data == NULL){
+
         kfree(temp_buffer);
         mutex_unlock(device->lock);
         return -ENOMEM;
+
     }
     if(device->ent){
-        memcpy(newline, device->ent, device->ent_size);
+
+        memcpy(node_data, device->ent, device->ent_size);
         kfree(device->ent);
     }
-
-    memcpy(newline + device->ent_size, temp_buffer, count);
+    memcpy(node_data + device->ent_size, temp_buffer, count);
     kfree(temp_buffer);
 
-    device->ent = newline;
-    device->ent_size = accum_len;
+    device->ent = node_data;
+    device->ent_size = accum_length;
 
-    while((newline = memchr(device->ent + node_offset, '\n', device->ent_size - node_offset)) != NULL){
+    while((newline_ptr = memchr(device->ent + write_offset, '\n', device->ent_size - write_offset)) != NULL){
 
-        int tot_len = newline - (device->ent + node_offset) + 1;
-        char *tmp_buf = kmalloc(tot_len, GFP_KERNEL);
-        if(tmp_buf == NULL){
+        size_t cmd_length = newline_ptr - (device->ent + write_offset) + 1;
+        char *cmd_buf = kmalloc(cmd_length, GFP_KERNEL);
+        if(!cmd_buf){
             mutex_unlock(device->lock);
             return -ENOMEM;
         }
-        memcpy(tmp_buf, device->ent + node_offset, tot_len);
-        struct aesd_buffer_entry new_node;
-        new_node.buffptr = tmp_buf;
-        new_node.size = tot_len;
+        memcpy(cmd_buf, device->ent + write_offset, cmd_length);
 
-        const char *prev_line = aesd_circular_buffer_add_entry(device->buf, &new_node);
 
-        if(prev_line != NULL){
-            kfree(prev_line);
-        }
+        struct aesd_buffer_entry new_entry;
+        new_entry.buffptr = cmd_buf;
+        new_entry.size = cmd_length;
 
-        node_offset += tot_len;
+        const char *old_cmd = aesd_circular_buffer_add_entry(device->buf, &new_entry);
+        if (old_cmd)
+            kfree(old_cmd);
+
+        write_offset += cmd_length;
     }
 
-    if(node_offset < device->ent_size) {
-        int num_bytes_in_node = device->ent_size - node_offset;
+    if(write_offset < device->ent_size){
 
-        char *temp_buf = kmalloc(num_bytes_in_node, GFP_KERNEL);
+        size_t leftover = device->ent_size - write_offset;
 
-        if(temp_buf == NULL){
+        char *temp_buf = kmalloc(leftover, GFP_KERNEL);
+        if (!temp_buf) {
             mutex_unlock(device->lock);
             return -ENOMEM;
         }
-        memcpy(temp_buf, device->ent + node_offset, num_bytes_in_node);
+
+        memcpy(temp_buf, device->ent + write_offset, leftover);
         kfree(device->ent);
         device->ent = temp_buf;
-        device->ent_size = num_bytes_in_node;
+        device->ent_size = leftover;
+
     }else{
 
         kfree(device->ent);
         device->ent = NULL;
         device->ent_size = 0;
     }
-    mutex_unlock(device->lock);
 
+    mutex_unlock(device->lock);
     return count;
 }
 
