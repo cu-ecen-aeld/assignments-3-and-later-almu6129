@@ -51,27 +51,36 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                         (dev->buf->in_offs - dev->buf->out_offs);
 
     for(int i = 0; i < how_many_nodes; i++){
+
         int pos = (dev->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
         num_bytes_in_buffer += dev->buf->entry[pos].size;
+
     }
 
     if(new_fpos >= num_bytes_in_buffer){
+
         mutex_unlock(dev->lock);
         return 0;
+
     }
 
     while(count > 0 && (entry = aesd_circular_buffer_find_entry_offset_for_fpos(dev->buf, new_fpos, &spot_in_node)) != NULL){
+
         avail_in_node_rem = entry->size - spot_in_node;
         final_copy_num = (count < avail_in_node_rem) ? count : avail_in_node_rem;
+
         if(copy_to_user(buf, entry->buffptr + spot_in_node, final_copy_num) != 0){
             mutex_unlock(dev->lock);
             return -EFAULT;
         }
+
         buf += final_copy_num;
         count -= final_copy_num;
         new_fpos += final_copy_num;
         num_actual_copied += final_copy_num;
+
     }
+
     *f_pos = new_fpos;
     mutex_unlock(dev->lock);
     return num_actual_copied;
@@ -81,72 +90,81 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     struct aesd_dev *dev = filp->private_data;
-    char *kern_buf = NULL;
-    char *new_cmd = NULL;
+    struct aesd_buffer_entry node_to_add;
+    char *temp_buf_from_user = NULL;
+    char *full_temp_buffer = NULL;
+    char *final_buffer;
     size_t total_len;
-    char *newline_ptr = NULL;
-    size_t write_offset = 0;
+    char *tmp_ptr = NULL;
+    size_t new_offset_in_node = 0;
+    char *to_free;
+    size_t num_left;
 
     PDEBUG("write %zu bytes with offset %lld", count, *f_pos);
 
-    kern_buf = kmalloc(count, GFP_KERNEL);
-    if (!kern_buf)
+    temp_buf_from_user = kmalloc(count, GFP_KERNEL);
+    if (temp_buf_from_user == NULL)
         return -ENOMEM;
-    if (copy_from_user(kern_buf, buf, count)) {
-        kfree(kern_buf);
+    if (copy_from_user(temp_buf_from_user, buf, count)) {
+        kfree(temp_buf_from_user);
         return -EFAULT;
     }
 
     mutex_lock(dev->lock);
 
     total_len = dev->ent_size + count;
-    new_cmd = kmalloc(total_len, GFP_KERNEL);
-    if(new_cmd == NULL){
-        kfree(kern_buf);
+
+    full_temp_buffer = kmalloc(total_len, GFP_KERNEL);
+
+    if(full_temp_buffer == NULL){
+        kfree(temp_buf_from_user);
         mutex_unlock(dev->lock);
         return -ENOMEM;
     }
     if(dev->ent){
-        memcpy(new_cmd, dev->ent, dev->ent_size);
+        memcpy(full_temp_buffer, dev->ent, dev->ent_size);
         kfree(dev->ent);
     }
-    memcpy(new_cmd + dev->ent_size, kern_buf, count);
-    kfree(kern_buf);
-    dev->ent = new_cmd;
+    memcpy(full_temp_buffer + dev->ent_size, temp_buf_from_user, count);
+    kfree(temp_buf_from_user);
+    dev->ent = full_temp_buffer;
     dev->ent_size = total_len;
 
-    while((newline_ptr = memchr(dev->ent + write_offset, '\n', dev->ent_size - write_offset)) != NULL){
-        size_t cmd_length = newline_ptr - (dev->ent + write_offset) + 1;
-        char *cmd_buf = kmalloc(cmd_length, GFP_KERNEL);
-        if (!cmd_buf) {
+    while((tmp_ptr = memchr(dev->ent + new_offset_in_node, '\n', dev->ent_size - new_offset_in_node)) != NULL){
+
+        size_t new_len = tmp_ptr - (dev->ent + new_offset_in_node) + 1;
+
+        final_buffer = kmalloc(new_len, GFP_KERNEL);
+
+        if(final_buffer == NULL){
             mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-        memcpy(cmd_buf, dev->ent + write_offset, cmd_length);
 
+        memcpy(final_buffer, dev->ent + new_offset_in_node, new_len);
 
-        struct aesd_buffer_entry new_entry;
-        new_entry.buffptr = cmd_buf;
-        new_entry.size = cmd_length;
+        node_to_add.buffptr = final_buffer;
+        node_to_add.size = new_len;
 
-        const char *old_cmd = aesd_circular_buffer_add_entry(dev->buf, &new_entry);
-        if(old_cmd) kfree(old_cmd);
+        to_free = aesd_circular_buffer_add_entry(dev->buf, &node_to_add);
+        if(to_free) kfree(to_free);
 
-        write_offset += cmd_length;
+        new_offset_in_node += new_len;
     }
 
 
-    if (write_offset < dev->ent_size) {
-        size_t leftover = dev->ent_size - write_offset;
-        char *temp_buf = kmalloc(leftover, GFP_KERNEL);
+    if(new_offset_in_node < dev->ent_size){
+
+        num_left = dev->ent_size - new_offset_in_node;
+        char *temp_buf = kmalloc(num_left, GFP_KERNEL);
         if(temp_buf == NULL){
             mutex_unlock(dev->lock);
             return -ENOMEM;
         }
-        memcpy(temp_buf, dev->ent + write_offset, leftover);
+        memcpy(temp_buf, dev->ent + new_offset_in_node, num_left);
         kfree(dev->ent);
         dev->ent = temp_buf;
-        dev->ent_size = leftover;
+        dev->ent_size = num_left;
     }else{
         kfree(dev->ent);
         dev->ent = NULL;
