@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <syslog.h>
@@ -12,11 +13,13 @@
 #include <pthread.h>
 #include <time.h>
 #include <stdbool.h>
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 #include "queue.h"
 
 #define PORT_NUM 9000
 #define BUFSIZE 512
+#define SEEKTO_LETTER_LEN 19
 
 #define USE_AESD_CHAR_DEVICE 1
 
@@ -280,7 +283,24 @@ void *response_handler(void *thread_info){
 
 		pthread_mutex_lock(total_context -> file_mutex_lock);
 
-		lseek(fd, 0, SEEK_END);
+		if(strstr(token, "AESDCHAR_IOCSEEKTO:") == NULL){
+			lseek(fd, 0, SEEK_END);
+		}
+		else{
+			struct aesd_seekto seek_struct;
+			int x, y;
+			if(sscanf(token, "AESDCHAR_IOCSEEKTO:%d,%d", &x, &y) != 2){
+				fprintf(stderr, "Ran into issues parsing the seekto command\n");
+				pthread_mutex_unlock(total_context -> file_mutex_lock);
+				return thread_info;
+			}
+			seek_struct.write_cmd = x;
+			seek_struct.write_cmd_offset = y;
+
+			ioctl(fd, AESDCHAR_IOCSEEKTO, seek_struct);
+
+			break;
+		}
 
 		int len_to_write = strlen(token);
 
@@ -299,7 +319,8 @@ void *response_handler(void *thread_info){
 
 	write(fd, "\n", 1);
 
-	lseek(fd, 0, SEEK_SET);
+	//Shouldn't seek to the beggining anymore for the readback I believe
+	//lseek(fd, 0, SEEK_SET);
 
 	while ((bytes_read = read(fd, buf, BUFSIZE)) > 0) {
 		sendall(total_context -> new_sock, buf, &bytes_read);
