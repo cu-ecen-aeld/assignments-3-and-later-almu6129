@@ -306,8 +306,8 @@ void *response_handler(void *thread_info){
 			pthread_mutex_unlock(total_context -> file_mutex_lock);
 			closelog();
 			found_terminator = 0;
-			//continue;
-			break;
+			continue;
+			//break;
 		}
 
 		int len_to_write = strlen(token);
