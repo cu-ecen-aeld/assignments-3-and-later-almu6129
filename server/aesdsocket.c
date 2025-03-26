@@ -328,7 +328,7 @@ void *response_handler(void *thread_info){
 	write(fd, "\n", 1);
 
 	//Shouldn't seek to the beggining anymore for the readback I believe
-	//lseek(fd, 0, SEEK_SET);
+	lseek(fd, 0, SEEK_SET);
 
 	while ((bytes_read = read(fd, buf, BUFSIZE)) > 0) {
 		sendall(total_context -> new_sock, buf, &bytes_read);
