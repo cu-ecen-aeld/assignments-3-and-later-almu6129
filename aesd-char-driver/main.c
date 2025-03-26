@@ -236,12 +236,12 @@ loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
 
         PDEBUG("Doing seek end with offset %d.\n", offset);
         mutex_lock(dev -> lock);
-        if(offset > dev->buf->num_bytes){
+        if((offset + dev->buf->num_bytes) > dev->buf->num_bytes || (offset + dev->buf->num_bytes) < 0){
             mutex_unlock(dev->lock);
             return -EINVAL;
         }
 
-        filp -> f_pos = (dev -> buf-> num_bytes - 1) - offset;
+        filp -> f_pos = (dev -> buf-> num_bytes) + offset;
         mutex_unlock(dev->lock);
 
         break;
