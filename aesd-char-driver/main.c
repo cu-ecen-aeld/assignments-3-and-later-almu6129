@@ -275,7 +275,7 @@ static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off)
     }
 
     for(int i = 0; i < buf_off; i++){
-        filp -> f_pos += (dev -> buf -> entry[buf_off].size);
+        filp -> f_pos += (dev -> buf -> entry[i].size);
     }
 
     filp -> f_pos += cmd_off;
@@ -288,7 +288,7 @@ static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off)
 
 long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 
-    int retval;
+    int retval = 0;
 
     switch (cmd)
     {
