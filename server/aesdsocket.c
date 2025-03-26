@@ -303,6 +303,15 @@ void *response_handler(void *thread_info){
 
 			ioctl(fd, AESDCHAR_IOCSEEKTO, seek_struct);
 
+			char read_buf[1024];
+			ssize_t bytes_read;
+			
+			while ((bytes_read = read(fd, read_buf, sizeof(read_buf))) > 0) {
+				if (send(fd, read_buf, bytes_read, 0) < 0) {
+					fprintf(stderr, "Ran into issues parsing the seekto command\n");
+				}
+			}
+
 			pthread_mutex_unlock(total_context -> file_mutex_lock);
 			closelog();
 			found_terminator = 0;
