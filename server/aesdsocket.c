@@ -289,16 +289,22 @@ void *response_handler(void *thread_info){
 		else{
 			struct aesd_seekto seek_struct;
 			int x, y;
+			openlog(NULL, LOG_CONS, LOG_USER);
 			if(sscanf(token, "AESDCHAR_IOCSEEKTO:%d,%d", &x, &y) != 2){
 				fprintf(stderr, "Ran into issues parsing the seekto command\n");
+				syslog(LOG_DEBUG, "Ran into issues parsing the string");
 				pthread_mutex_unlock(total_context -> file_mutex_lock);
+				closelog();
 				return thread_info;
 			}
+			syslog(LOG_DEBUG, "Seeking to command: %d at offset %d", x, y);
 			seek_struct.write_cmd = x;
 			seek_struct.write_cmd_offset = y;
 
 			ioctl(fd, AESDCHAR_IOCSEEKTO, seek_struct);
 
+			pthread_mutex_unlock(total_context -> file_mutex_lock);
+			closelog();
 			continue;
 		}
 

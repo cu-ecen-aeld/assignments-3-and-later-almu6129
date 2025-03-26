@@ -208,6 +208,7 @@ loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
     {
     case SEEK_SET:
         
+        PDEBUG("Doing seek set with offset %d.\n", offset);
         mutex_lock(dev -> lock);
         if(offset > (dev -> buf->num_bytes - 1)){
             mutex_unlock(dev->lock);
@@ -220,6 +221,7 @@ loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
         break;
     case SEEK_CUR:
 
+        PDEBUG("Doing seek cur with offset %d.\n", offset);
         mutex_lock(dev -> lock);
         if((filp -> f_pos + offset) > (dev -> buf->num_bytes - 1)){
             mutex_unlock(dev->lock);
@@ -232,6 +234,7 @@ loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
         break;
     case SEEK_END:
 
+        PDEBUG("Doing seek end with offset %d.\n", offset);
         mutex_lock(dev -> lock);
         if(((dev -> buf-> num_bytes - 1) - offset) < 0){
             mutex_unlock(dev->lock);
@@ -243,6 +246,7 @@ loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
 
         break;
     default:
+        PDEBUG("Ended up with invalid whence");
         break;
     }
     return 0;
@@ -252,6 +256,8 @@ static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off)
 
     struct aesd_dev *dev = filp->private_data;
     int how_many_nodes;
+
+    PDEBUG("Adjusting the FP with buff off %d and cmd off %d\n", buf_off, cmd_off);
 
     mutex_lock(dev->lock);
 
