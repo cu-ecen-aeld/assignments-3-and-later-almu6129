@@ -256,6 +256,7 @@ static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off)
 
     struct aesd_dev *dev = filp->private_data;
     int how_many_nodes;
+    int offset = 0;
 
     PDEBUG("Adjusting the FP with buff off %d and cmd off %d\n", buf_off, cmd_off);
 
@@ -274,11 +275,21 @@ static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off)
         return -EINVAL;
     }
 
-    for(int i = 0; i < buf_off; i++){
-        filp -> f_pos += (dev -> buf -> entry[i].size);
+    for (int i = 0; i < how_many_nodes; i++) {
+        size_t index = (dev->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+        if (i == buf_off) {
+            if (cmd_off >= dev->buf->entry[index].size) {
+                mutex_unlock(dev->lock);
+                return -EINVAL;
+            }
+            offset += cmd_off;
+            break;
+        } else {
+            offset += dev->buf->entry[index].size;
+        }
     }
 
-    filp -> f_pos += cmd_off;
+    filp -> f_pos = offset;
 
     mutex_unlock(dev->lock);
 
