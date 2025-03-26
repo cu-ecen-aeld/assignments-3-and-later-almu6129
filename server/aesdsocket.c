@@ -250,7 +250,7 @@ void *response_handler(void *thread_info){
 	thread_context * total_context = (thread_context *)thread_info;
 	int n;
 	char *token;
-	int found_terminator;
+	int found_terminator, found_command = 0;
 	int bytes_read;
 
 	int fd = open(FILE_LOCATION, O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -315,8 +315,11 @@ void *response_handler(void *thread_info){
 			pthread_mutex_unlock(total_context -> file_mutex_lock);
 			closelog();
 			found_terminator = 0;
+			found_command = 1;
 			//continue;
-			break;
+			//break;
+			close(fd);
+			return thread_info;
 		}
 
 		int len_to_write = strlen(token);
@@ -337,7 +340,7 @@ void *response_handler(void *thread_info){
 	write(fd, "\n", 1);
 
 	//Shouldn't seek to the beggining anymore for the readback I believe
-	//lseek(fd, 0, SEEK_SET);
+	lseek(fd, 0, SEEK_SET);
 
 	while ((bytes_read = read(fd, buf, BUFSIZE)) > 0) {
 		sendall(total_context -> new_sock, buf, &bytes_read);
