@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <syslog.h>
@@ -12,11 +13,13 @@
 #include <pthread.h>
 #include <time.h>
 #include <stdbool.h>
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 #include "queue.h"
 
 #define PORT_NUM 9000
 #define BUFSIZE 512
+#define SEEKTO_LETTER_LEN 19
 
 #define USE_AESD_CHAR_DEVICE 1
 
@@ -247,7 +250,7 @@ void *response_handler(void *thread_info){
 	thread_context * total_context = (thread_context *)thread_info;
 	int n;
 	char *token;
-	int found_terminator;
+	int found_terminator, found_command = 0;
 	int bytes_read;
 
 	int fd = open(FILE_LOCATION, O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -280,7 +283,44 @@ void *response_handler(void *thread_info){
 
 		pthread_mutex_lock(total_context -> file_mutex_lock);
 
-		lseek(fd, 0, SEEK_END);
+		if(strstr(token, "AESDCHAR_IOCSEEKTO:") == NULL){
+			lseek(fd, 0, SEEK_END);
+		}
+		else{
+			struct aesd_seekto seek_struct;
+			int x, y;
+			openlog(NULL, LOG_CONS, LOG_USER);
+			if(sscanf(token, "AESDCHAR_IOCSEEKTO:%d,%d", &x, &y) != 2){
+				fprintf(stderr, "Ran into issues parsing the seekto command\n");
+				syslog(LOG_DEBUG, "Ran into issues parsing the string");
+				pthread_mutex_unlock(total_context -> file_mutex_lock);
+				closelog();
+				return thread_info;
+			}
+			syslog(LOG_DEBUG, "Seeking to command: %d at offset %d", x, y);
+			seek_struct.write_cmd = x;
+			seek_struct.write_cmd_offset = y;
+
+			ioctl(fd, AESDCHAR_IOCSEEKTO, seek_struct);
+
+			char read_buf[1024];
+			ssize_t bytes_read;
+			
+			while ((bytes_read = read(fd, read_buf, sizeof(read_buf))) > 0) {
+				if (send(fd, read_buf, bytes_read, 0) < 0) {
+					fprintf(stderr, "Ran into issues parsing the seekto command\n");
+				}
+			}
+
+			pthread_mutex_unlock(total_context -> file_mutex_lock);
+			closelog();
+			found_terminator = 0;
+			found_command = 1;
+			//continue;
+			//break;
+			close(fd);
+			return thread_info;
+		}
 
 		int len_to_write = strlen(token);
 
@@ -299,6 +339,7 @@ void *response_handler(void *thread_info){
 
 	write(fd, "\n", 1);
 
+	//Shouldn't seek to the beggining anymore for the readback I believe
 	lseek(fd, 0, SEEK_SET);
 
 	while ((bytes_read = read(fd, buf, BUFSIZE)) > 0) {

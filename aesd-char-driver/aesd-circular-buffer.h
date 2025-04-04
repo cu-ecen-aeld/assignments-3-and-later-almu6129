@@ -28,6 +28,8 @@ struct aesd_circular_buffer
 
     uint8_t out_offs;
 
+    int num_bytes;
+
     bool full;
 };
 

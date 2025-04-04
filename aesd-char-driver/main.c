@@ -6,6 +6,7 @@
 #include <linux/fs.h> 
 #include "aesdchar.h"
 #include "aesd-circular-buffer.h"
+#include "aesd_ioctl.h"
 
 int aesd_major =   0;
 int aesd_minor =   0;
@@ -195,7 +196,129 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
     mutex_unlock(dev->lock);
 
+    *f_pos += count;
     return count;
+}
+
+loff_t aesd_llseek(struct file *filp, loff_t offset, int whence){
+
+    struct aesd_dev *dev = filp->private_data;
+
+    switch (whence)
+    {
+    case SEEK_SET:
+        
+        PDEBUG("Doing seek set with offset %d.\n", offset);
+        mutex_lock(dev -> lock);
+        if(offset < 0 || offset >= dev->buf->num_bytes){
+            mutex_unlock(dev->lock);
+            return -EINVAL;
+        }
+
+        filp -> f_pos = offset;
+        mutex_unlock(dev->lock);
+
+        break;
+    case SEEK_CUR:
+
+        PDEBUG("Doing seek cur with offset %d.\n", offset);
+        mutex_lock(dev -> lock);
+        if(filp->f_pos + offset < 0 || filp->f_pos + offset >= dev->buf->num_bytes){
+            mutex_unlock(dev->lock);
+            return -EINVAL;
+        }
+
+        filp -> f_pos += offset;
+        mutex_unlock(dev->lock);
+
+        break;
+    case SEEK_END:
+
+        PDEBUG("Doing seek end with offset %d.\n", offset);
+        mutex_lock(dev -> lock);
+        if((offset + dev->buf->num_bytes) > dev->buf->num_bytes || (offset + dev->buf->num_bytes) < 0){
+            mutex_unlock(dev->lock);
+            return -EINVAL;
+        }
+
+        filp -> f_pos = (dev -> buf-> num_bytes) + offset;
+        mutex_unlock(dev->lock);
+
+        break;
+    default:
+        PDEBUG("Ended up with invalid whence");
+        break;
+    }
+    return 0;
+}
+
+static long aesd_adjust_file_offset(struct file *filp, int buf_off, int cmd_off){
+
+    struct aesd_dev *dev = filp->private_data;
+    int how_many_nodes;
+    int offset = 0;
+
+    PDEBUG("Adjusting the FP with buff off %d and cmd off %d\n", buf_off, cmd_off);
+
+    mutex_lock(dev->lock);
+
+    if(dev->buf->full) how_many_nodes = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    else how_many_nodes = (dev->buf->in_offs - dev->buf->out_offs);
+
+    if(buf_off >= how_many_nodes){
+        mutex_unlock(dev->lock);
+        return -EINVAL;
+    }
+
+    if(cmd_off >= dev -> buf -> entry[buf_off].size){
+        mutex_unlock(dev->lock);
+        return -EINVAL;
+    }
+
+    for (int i = 0; i < how_many_nodes; i++) {
+        size_t index = (dev->buf->out_offs + i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+        if (i == buf_off) {
+            if (cmd_off >= dev->buf->entry[index].size) {
+                mutex_unlock(dev->lock);
+                return -EINVAL;
+            }
+            offset += cmd_off;
+            break;
+        } else {
+            offset += dev->buf->entry[index].size;
+        }
+    }
+
+    filp -> f_pos = offset;
+
+    mutex_unlock(dev->lock);
+
+    return 0;
+    
+}
+
+long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+
+    int retval = 0;
+
+    switch (cmd)
+    {
+    case AESDCHAR_IOCSEEKTO:
+        struct aesd_seekto seekto;
+        if(__copy_from_user(&seekto, (const void __user *)arg, sizeof(seekto)) != 0){
+            retval = -EFAULT;
+        }
+        else{
+            retval = aesd_adjust_file_offset(filp, seekto.write_cmd, seekto.write_cmd_offset);
+        }
+        break;
+    
+    default:
+        break;
+    }
+
+    return retval;
+
 }
 
 struct file_operations aesd_fops = {
@@ -204,6 +327,8 @@ struct file_operations aesd_fops = {
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+    .llseek =   aesd_llseek,
+    .unlocked_ioctl =    aesd_ioctl,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)

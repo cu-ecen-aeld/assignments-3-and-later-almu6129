@@ -62,10 +62,14 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
 
         overwritten_node = buffer->entry[buffer->out_offs].buffptr;
 
+        buffer -> num_bytes -= buffer->entry[buffer->out_offs].size;
+
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
 
     buffer->entry[buffer->in_offs] = *add_entry;
+
+    buffer -> num_bytes += add_entry -> size;
 
     buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
 
